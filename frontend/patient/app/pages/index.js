@@ -1,0 +1,9 @@
+export { default as Dashboard } from './Dashboard';
+export { default as Appointments } from './Appointments';
+export { default as Profile } from './Profile';
+export { default as Documents } from './Documents';
+export { default as Vaccinations } from './Vaccinations';
+export { default as MedicalFile } from './MedicalFile';
+export { default as Announcements } from './Announcements';
+export { default as Settings } from './Settings';
+export { default as BookAppointment } from './BookAppointment';

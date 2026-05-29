@@ -1,0 +1,22 @@
+/* Hide duplicate sidebars from imported Figma components */
+[data-name="Aside - Sidebar Navigation"],
+[data-name="Aside - SideNav Bar Component"],
+[data-name="Aside - SideNavBar Component"],
+[data-name="Aside - SideNavBar (Shared Component)"],
+[data-name="Aside - SideNavBar"],
+[data-name="Aside - Sidebar Wrapper"],
+[data-name="Aside - SideNavBar (Execution from JSON)"] {
+  display: none !important;
+}
+
+/* Adjust main content areas to not account for the hidden sidebar */
+[data-name="Arcio Dashboard (Redesigned)"],
+[data-name="Arcio Doctors (Redesigned)"],
+[data-name="Arcio Patients (Redesigned)"],
+[data-name="Arcio Appointments (Redesigned)"],
+[data-name="Arcio Announcements (Redesigned)"],
+[data-name="Arcio Settings (Redesigned)"],
+[data-name="services"],
+[data-name="schedule"] {
+  padding-left: 0 !important;
+}
