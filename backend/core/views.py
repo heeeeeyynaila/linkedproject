@@ -174,7 +174,7 @@ def update_profile(request):
         value = request.data.get(field)
         if value:
             if field == 'phone':
-                cleaned = re.sub(r'[\s\-]', '', value)
+                cleaned = re.sub(r'[\s\-+]', '', value)
                 if not cleaned.isdigit() or not (7 <= len(cleaned) <= 15):
                     return Response({'error': 'Phone must be digits only, between 7 and 15 numbers'}, status=400)
             setattr(user, field, value)
@@ -307,7 +307,7 @@ def doctor_create(request):
 
         phone = request.data.get('phone')
         if phone:
-            cleaned = re.sub(r'[\s\-]', '', phone)
+            cleaned = re.sub(r'[\s\-+]', '', phone)
             if not cleaned.isdigit() or not (7 <= len(cleaned) <= 15):
                 return Response({'error': 'Phone must be digits only, between 7 and 15 numbers'}, status=400)
 
@@ -401,7 +401,7 @@ def patient_create(request):
         if not phone:
             return Response({'error': 'Guardian phone is required'}, status=400)
 
-        cleaned = re.sub(r'[\s\-]', '', phone)
+        cleaned = re.sub(r'[\s\-+]', '', phone)
         if not cleaned.isdigit() or not (7 <= len(cleaned) <= 15):
             return Response({'error': 'Guardian phone must be digits only, between 7 and 15 numbers'}, status=400)
 
