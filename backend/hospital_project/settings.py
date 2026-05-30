@@ -125,6 +125,7 @@ SIMPLE_JWT = {
 }
 
 # ── CORS ──
+CORS_ALLOW_ALL_ORIGINS = True
 # Allow the Vite dev server and production origins
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
