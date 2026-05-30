@@ -5,8 +5,6 @@
  * All API calls go through this module so the base URL and auth headers
  * are managed in one place.
  * 
- * Auth: JWT Bearer tokens via djangorestframework-simplejwt
- * 
  * Usage:
  *   import api from '@/services/api';
  *   const patients = await api.patients.list();
@@ -17,37 +15,26 @@
 // In production the React build is served by Django, so same origin.
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
-// ── Token helpers ──────────────────────────────────────────────
-function getAccessToken() {
-  return localStorage.getItem('access_token');
-}
-
-function getRefreshToken() {
-  return localStorage.getItem('refresh_token');
-}
-
-function setTokens(access, refresh) {
-  localStorage.setItem('access_token', access);
-  if (refresh) localStorage.setItem('refresh_token', refresh);
-}
-
-function clearTokens() {
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
+// ── Helper: get CSRF token from cookie (Django sets this) ──────
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+  return '';
 }
 
 // ── Core fetch wrapper ─────────────────────────────────────────
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
 
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
   const headers = {
     'Content-Type': 'application/json',
+    'X-CSRFToken': getCookie('csrftoken'),
     ...options.headers,
   };
 
-  // Attach JWT Bearer token if available
-  const token = getAccessToken();
-  if (token) {
+  if (token && endpoint !== '/login/') {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
@@ -59,19 +46,10 @@ async function request(endpoint, options = {}) {
   const config = {
     ...options,
     headers,
+    credentials: 'same-origin', // send cookies to Django
   };
 
-  let response = await fetch(url, config);
-
-  // If 401, attempt token refresh once
-  if (response.status === 401 && getRefreshToken()) {
-    const refreshed = await refreshAccessToken();
-    if (refreshed) {
-      headers['Authorization'] = `Bearer ${getAccessToken()}`;
-      config.headers = headers;
-      response = await fetch(url, config);
-    }
-  }
+  const response = await fetch(url, config);
 
   // Handle 204 No Content
   if (response.status === 204) return null;
@@ -80,35 +58,22 @@ async function request(endpoint, options = {}) {
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const error = new Error(data?.detail || data?.message || `API Error ${response.status}`);
+    if (response.status === 401) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refresh_token');
+      const path = window.location.pathname;
+      if (path !== '/' && !path.includes('/login')) {
+        window.location.href = '/';
+      }
+    }
+    const error = new Error(data?.detail || data?.message || data?.error || `API Error ${response.status}`);
     error.status = response.status;
     error.data = data;
     throw error;
   }
 
   return data;
-}
-
-// ── Token refresh ──────────────────────────────────────────────
-async function refreshAccessToken() {
-  try {
-    const response = await fetch(`${BASE_URL}/token/refresh/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh: getRefreshToken() }),
-    });
-    if (response.ok) {
-      const data = await response.json();
-      setTokens(data.access, data.refresh || getRefreshToken());
-      return true;
-    }
-    // Refresh failed — clear tokens (user must re-login)
-    clearTokens();
-    return false;
-  } catch {
-    clearTokens();
-    return false;
-  }
 }
 
 // ── HTTP method shortcuts ──────────────────────────────────────
@@ -123,25 +88,18 @@ const upload = (endpoint, formData) =>
   request(endpoint, { method: 'POST', body: formData });
 
 // ── Resource APIs ──────────────────────────────────────────────
-// Each key maps to a Django REST endpoint defined in core/urls.py.
-// All routes are prefixed with /api/ via the Vite proxy + Django urls.py.
+// Each key maps to a Django REST endpoint. When your Django backend
+// is ready, these will work out of the box.
 
 const api = {
-  // ── Auth (JWT) ──
+  // ── Auth ──
   auth: {
-    login:          (credentials) => post('/login/', credentials),
-    logout:         ()            => post('/logout/'),
-    refreshToken:   ()            => post('/token/refresh/', { refresh: getRefreshToken() }),
-    changePassword: (data)        => post('/change-password/', data),
-    me:             ()            => get('/my-profile/'),
-    updateProfile:  (data)        => patch('/my-profile/update/', data),
-  },
-
-  // ── Token management (exposed for components) ──
-  tokens: {
-    get:    getAccessToken,
-    set:    setTokens,
-    clear:  clearTokens,
+    login:              (credentials) => post('/login/', credentials),
+    logout:             ()            => post('/logout/'),
+    me:                 ()            => get('/my-profile/'),
+    changePassword:     (data)        => put('/change-password/', data),
+    updateProfile:      (data)        => put('/my-profile/update/', data),
+    uploadDoctorImages: (formData)    => upload('/my-profile/doctor-images/', formData),
   },
 
   // ── Patients ──
@@ -149,22 +107,17 @@ const api = {
     list:     ()           => get('/patients/'),
     get:      (id)         => get(`/patients/${id}/`),
     create:   (data)       => post('/patients/create/', data),
-    update:   (id, data)   => patch(`/patients/${id}/update/`, data),
+    update:   (id, data)   => put(`/patients/${id}/update/`, data),
     delete:   (id)         => del(`/patients/${id}/delete/`),
-    search:   (query)      => get(`/patients/search/?q=${encodeURIComponent(query)}`),
-    filter:   (params)     => get(`/patients/filter/?${new URLSearchParams(params)}`),
   },
 
   // ── Doctors ──
   doctors: {
-    list:         ()           => get('/doctors/'),
-    listPublic:   ()           => get('/doctors/public/'),
-    get:          (id)         => get(`/doctors/${id}/`),
-    create:       (data)       => post('/doctors/create/', data),
-    update:       (id, data)   => patch(`/doctors/${id}/update/`, data),
-    delete:       (id)         => del(`/doctors/${id}/delete/`),
-    availability: (id)         => get(`/doctors/${id}/availability/`),
-    slots:        (id)         => get(`/doctors/${id}/slots/`),
+    list:     ()           => get('/doctors/'),
+    get:      (id)         => get(`/doctors/${id}/`),
+    create:   (data)       => post('/doctors/create/', data),
+    update:   (id, data)   => put(`/doctors/${id}/update/`, data),
+    delete:   (id)         => del(`/doctors/${id}/delete/`),
   },
 
   // ── Appointments ──
@@ -172,79 +125,102 @@ const api = {
     list:         ()           => get('/appointments/'),
     get:          (id)         => get(`/appointments/${id}/`),
     create:       (data)       => post('/appointments/create/', data),
-    update:       (id, data)   => patch(`/appointments/${id}/update/`, data),
+    update:       (id, data)   => put(`/appointments/${id}/update/`, data),
     delete:       (id)         => del(`/appointments/${id}/delete/`),
-    filter:       (params)     => get(`/appointments/filter/?${new URLSearchParams(params)}`),
-    updateStatus: (id, data)   => patch(`/appointments/${id}/status/`, data),
-    cancel:       (id)         => post(`/appointments/${id}/cancel/`),
+    updateStatus: (id, status) => patch(`/appointments/${id}/status/`, { appointment_status: status }),
+    cancel:       (id)         => patch(`/appointments/${id}/cancel/`),
     history:      (patientId)  => get(`/patients/${patientId}/appointments/history/`),
+  },
+
+  // ── Schedules ──
+  schedules: {
+    list:     ()           => get('/schedules/'),
+    mine:     ()           => get('/schedules/my-schedule/'),
+    create:   (data)       => post('/schedules/create/', data),
+    get:      (id)         => get(`/schedules/${id}/`),
+    update:   (id, data)   => put(`/schedules/${id}/update/`, data),
+    delete:   (id)         => del(`/schedules/${id}/delete/`),
   },
 
   // ── Services ──
   services: {
-    list:       ()           => get('/services/'),
-    listPublic: ()           => get('/services/public/'),
-    get:        (id)         => get(`/services/${id}/`),
-    create:     (data)       => post('/services/create/', data),
-    update:     (id, data)   => patch(`/services/${id}/update/`, data),
-    delete:     (id)         => del(`/services/${id}/delete/`),
+    list:     ()           => get('/services/'),
+    get:      (id)         => get(`/services/${id}/`),
+    create:   (data)       => post('/services/create/', data),
+    update:   (id, data)   => put(`/services/${id}/update/`, data),
+    delete:   (id)         => del(`/services/${id}/delete/`),
+  },
+
+  // ── Departments ──
+  departments: {
+    list:     ()           => get('/departments/'),
+    get:      (id)         => get(`/departments/${id}/`),
+    create:   (data)       => post('/departments/', data),
+    update:   (id, data)   => patch(`/departments/${id}/`, data),
+    delete:   (id)         => del(`/departments/${id}/`),
   },
 
   // ── Announcements ──
   announcements: {
     list:     ()           => get('/announcements/'),
+    get:      (id)         => get(`/announcements/${id}/`),
     create:   (data)       => post('/announcements/create/', data),
-    update:   (id, data)   => patch(`/announcements/${id}/update/`, data),
+    update:   (id, data)   => put(`/announcements/${id}/update/`, data),
     delete:   (id)         => del(`/announcements/${id}/delete/`),
   },
 
-  // ── Schedules ──
-  schedules: {
-    list:       ()           => get('/schedules/'),
-    get:        (id)         => get(`/schedules/${id}/`),
-    create:     (data)       => post('/schedules/create/', data),
-    update:     (id, data)   => patch(`/schedules/${id}/update/`, data),
-    delete:     (id)         => del(`/schedules/${id}/delete/`),
-    mine:       ()           => get('/schedules/my-schedule/'),
+  // ── Analytics ──
+  analytics: {
+    dashboard:  ()         => get('/dashboard/'),
+    reports:    (params)   => get(`/analytics/reports/?${new URLSearchParams(params)}`),
   },
 
-  // ── Medical Files ──
-  medicalFile: {
-    get:      (patientId)       => get(`/patients/${patientId}/medical-file/`),
-    update:   (patientId, data) => patch(`/patients/${patientId}/medical-file/update/`, data),
-    delete:   (patientId)       => del(`/patients/${patientId}/medical-file/delete/`),
-  },
-
-  // ── Documents ──
+  // ── Documents / Files ──
   documents: {
-    list:             (patientId)               => get(`/patients/${patientId}/documents/`),
-    get:              (patientId, docId)         => get(`/patients/${patientId}/documents/${docId}/`),
-    create:           (patientId, formData)      => upload(`/patients/${patientId}/documents/create/`, formData),
-    update:           (patientId, docId, data)   => patch(`/patients/${patientId}/documents/${docId}/update/`, data),
-    delete:           (patientId, docId)         => del(`/patients/${patientId}/documents/${docId}/delete/`),
-    toggleVisibility: (patientId, docId)         => patch(`/patients/${patientId}/documents/${docId}/toggle-visibility/`),
-    guardianList:     (patientId)               => get(`/patients/${patientId}/guardian-documents/`),
+    list:     (patientId)  => get(`/patients/${patientId}/documents/`),
+    create:   (patientId, data) => post(`/patients/${patientId}/documents/create/`, data),
+    delete:   (patientId, docId) => del(`/patients/${patientId}/documents/${docId}/`),
+    toggleVisibility: (patientId, docId) => patch(`/patients/${patientId}/documents/${docId}/toggle-visibility/`),
+    guardianList: (patientId) => get(`/patients/${patientId}/guardian-documents/`),
+    upload:   (formData)   => upload('/documents/upload/', formData),
+    download: (id)         => `${BASE_URL}/documents/${id}/download/`,
   },
 
   // ── Vaccinations ──
   vaccinations: {
-    list:     (patientId)               => get(`/patients/${patientId}/vaccinations/`),
-    get:      (patientId, recordId)     => get(`/patients/${patientId}/vaccinations/${recordId}/`),
-    create:   (patientId, data)         => post(`/patients/${patientId}/vaccinations/create/`, data),
+    list:     (patientId)  => get(`/patients/${patientId}/vaccinations/`),
+    create:   (patientId, data) => post(`/patients/${patientId}/vaccinations/create/`, data),
+    upcoming: (patientId)  => get(`/patients/${patientId}/vaccinations/upcoming/`),
+    get:      (patientId, recordId) => get(`/patients/${patientId}/vaccinations/${recordId}/`),
     update:   (patientId, recordId, data) => patch(`/patients/${patientId}/vaccinations/${recordId}/update/`, data),
-    delete:   (patientId, recordId)     => del(`/patients/${patientId}/vaccinations/${recordId}/delete/`),
-    upcoming: (patientId)               => get(`/patients/${patientId}/vaccinations/upcoming/`),
+    delete:   (patientId, recordId) => del(`/patients/${patientId}/vaccinations/${recordId}/delete/`),
   },
 
-  // ── Guardian ──
+  // ── Guardian Children ──
   guardian: {
-    medicalFile: (patientId)  => get(`/patients/${patientId}/guardian-file/`),
-    myChildren:  ()           => get('/guardian/my-children/'),
+    myChildren:   ()       => get('/guardian/my-children/'),
+    guardianFile: (patientId) => get(`/patients/${patientId}/guardian-file/`),
   },
 
-  // ── Admin Dashboard ──
-  dashboard: {
-    get: () => get('/dashboard/'),
+  // ── Medical File ──
+  medicalFile: {
+    get:      (patientId)  => get(`/patients/${patientId}/medical-file/`),
+    update:   (patientId, data) => put(`/patients/${patientId}/medical-file/update/`, data),
+    delete:   (patientId)  => del(`/patients/${patientId}/medical-file/delete/`),
+  },
+
+  // ── Shift Swaps ──
+  shiftSwaps: {
+    list:         () => get('/shift-swaps/'),
+    create:       (data) => post('/shift-swaps/create/', data),
+    updateStatus: (id, status) => patch(`/shift-swaps/${id}/status/`, { status }),
+  },
+
+  // ── Notifications ──
+  notifications: {
+    list:     ()           => get('/notifications/'),
+    markRead: (id)         => patch(`/notifications/${id}/`, { is_read: true }),
+    markAll:  ()           => post('/notifications/mark-all-read/'),
   },
 };
 

@@ -1,3 +1,5 @@
+import React, { useState, useEffect } from 'react';
+import api from '@/services/api';
 import svgPaths from "./svg-p8cijgubm1";
 import imgClinicianProfile from "./3c2ed93026931d7b46056262486f8da89c154b5b.png";
 import imgDrSarahChen from "./9d4fb464a9b98c94abf09dacbfb5319c606b3151.png";
@@ -677,9 +679,9 @@ function Container37() {
   );
 }
 
-function Button6() {
+function Button6({ onClick }) {
   return (
-    <div className="content-stretch flex gap-[8px] items-center px-[24px] py-[10px] relative rounded-[12px] shrink-0" style={{ backgroundImage: "linear-gradient(133.402deg, rgb(0, 101, 145) 0%, rgb(14, 165, 233) 100%)" }} data-name="Button">
+    <div onClick={onClick} className="content-stretch flex gap-[8px] items-center px-[24px] py-[10px] relative rounded-[12px] shrink-0 cursor-pointer hover:opacity-90 active:scale-95 transition-all" style={{ backgroundImage: "linear-gradient(133.402deg, rgb(0, 101, 145) 0%, rgb(14, 165, 233) 100%)" }} data-name="Button">
       <div className="absolute bg-[rgba(255,255,255,0)] inset-[0_-0.33px_0_0] rounded-[12px] shadow-[0px_10px_15px_-3px_rgba(0,101,144,0.2),0px_4px_6px_-4px_rgba(0,101,144,0.2)]" data-name="Button:shadow" />
       <Container37 />
       <div className="flex flex-col font-['Inter:Bold',sans-serif] font-bold h-[24px] justify-center leading-[0] not-italic relative shrink-0 text-[16px] text-center text-white w-[77.48px]">
@@ -689,20 +691,20 @@ function Button6() {
   );
 }
 
-function Container36() {
+function Container36({ onAddEntryClick }) {
   return (
     <div className="content-stretch flex gap-[12.01px] items-start relative shrink-0" data-name="Container">
       <Background1 />
-      <Button6 />
+      <Button6 onClick={onAddEntryClick} />
     </div>
   );
 }
 
-function DashboardHeader() {
+function DashboardHeader({ onAddEntryClick }) {
   return (
     <div className="content-stretch flex items-end justify-between relative shrink-0 w-full" data-name="Dashboard Header">
       <Container34 />
-      <Container36 />
+      <Container36 onAddEntryClick={onAddEntryClick} />
     </div>
   );
 }
@@ -1700,12 +1702,12 @@ function ScheduleGrid() {
   );
 }
 
-function MainCanvas() {
+function MainCanvas({ onAddEntryClick }) {
   return (
     <div className="relative shrink-0 w-full z-[1]" data-name="Main Canvas">
       <div className="overflow-clip rounded-[inherit] size-full">
         <div className="content-stretch flex flex-col gap-[32px] items-start p-[32px] relative size-full">
-          <DashboardHeader />
+          <DashboardHeader onAddEntryClick={onAddEntryClick} />
           <ScheduleGrid />
         </div>
       </div>
@@ -1713,28 +1715,171 @@ function MainCanvas() {
   );
 }
 
-function Main() {
+function Main({ onAddEntryClick }) {
   return (
     <div className="content-stretch flex flex-[1_0_0] flex-col isolate items-start min-w-px relative self-stretch" data-name="Main">
       <HeaderTopNavBarSharedComponent />
-      <MainCanvas />
+      <MainCanvas onAddEntryClick={onAddEntryClick} />
     </div>
   );
 }
 
-function Container() {
+function Container({ onAddEntryClick }) {
   return (
     <div className="content-stretch flex items-start min-h-[1024px] relative shrink-0 w-full" data-name="Container">
       <AsideSideNavBarSharedComponent />
-      <Main />
+      <Main onAddEntryClick={onAddEntryClick} />
     </div>
   );
 }
 
 export default function Schedule() {
+  const [showModal, setShowModal] = useState(false);
+  const [doctorsList, setDoctorsList] = useState([]);
+  const [formData, setFormData] = useState({
+    doctor: '',
+    day_of_week: 'monday',
+    start_time: '08:00',
+    end_time: '16:00',
+    max_appointments: '15'
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (showModal) {
+      api.doctors.list().then(data => {
+        setDoctorsList(data);
+        if (data.length > 0 && !formData.doctor) {
+          setFormData(prev => ({ ...prev, doctor: data[0].id.toString() }));
+        }
+      }).catch(err => {
+        console.error('Failed to load doctors list:', err);
+      });
+    }
+  }, [showModal]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const payload = {
+        doctor: parseInt(formData.doctor, 10),
+        day_of_week: formData.day_of_week,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        max_appointments: parseInt(formData.max_appointments, 10)
+      };
+      await api.schedules.create(payload);
+      alert('Schedule created successfully!');
+      setShowModal(false);
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to create schedule:', err);
+      alert(err.message || 'Failed to create schedule.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative size-full" data-name="schedule">
-      <Container />
+    <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative size-full min-h-screen" data-name="schedule">
+      <Container onAddEntryClick={() => setShowModal(true)} />
+
+      {showModal && (
+        <div className="fixed inset-0 bg-[#0f172a]/55 backdrop-blur-[6px] z-[9999] flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white/80 backdrop-blur-[20px] rounded-[24px] max-w-[480px] w-full p-[32px] shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-2xl font-bold font-['Manrope:Bold',sans-serif] text-[#1e293b] tracking-tight">Create Weekly Slot</h3>
+              <button 
+                onClick={() => setShowModal(false)}
+                className="rounded-[9999px] size-[32px] bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center text-slate-500 hover:text-slate-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 font-['Inter:Regular',sans-serif]">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase text-slate-400 tracking-wider">Assign Doctor</label>
+                <select 
+                  value={formData.doctor}
+                  onChange={(e) => setFormData({ ...formData, doctor: e.target.value })}
+                  required
+                  className="bg-slate-50 border border-slate-200 rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-[#0ea5e9] transition-colors w-full text-slate-800 font-medium"
+                >
+                  {doctorsList.map((doc) => (
+                    <option key={doc.id} value={doc.id}>
+                      Dr. {doc.first_name || doc.user?.first_name} {doc.last_name || doc.user?.last_name} ({doc.service_name || doc.service || 'Medical Service'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase text-slate-400 tracking-wider">Day of Week</label>
+                <select 
+                  value={formData.day_of_week}
+                  onChange={(e) => setFormData({ ...formData, day_of_week: e.target.value })}
+                  required
+                  className="bg-slate-50 border border-slate-200 rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-[#0ea5e9] transition-colors w-full text-slate-800 font-medium"
+                >
+                  <option value="sunday">Sunday</option>
+                  <option value="monday">Monday</option>
+                  <option value="tuesday">Tuesday</option>
+                  <option value="wednesday">Wednesday</option>
+                  <option value="thursday">Thursday</option>
+                  <option value="friday">Friday</option>
+                  <option value="saturday">Saturday</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold uppercase text-slate-400 tracking-wider">Start Time</label>
+                  <input 
+                    type="time"
+                    value={formData.start_time}
+                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                    required
+                    className="bg-slate-50 border border-slate-200 rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-[#0ea5e9] transition-colors w-full text-slate-800 font-medium"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold uppercase text-slate-400 tracking-wider">End Time</label>
+                  <input 
+                    type="time"
+                    value={formData.end_time}
+                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                    required
+                    className="bg-slate-50 border border-slate-200 rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-[#0ea5e9] transition-colors w-full text-slate-800 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase text-slate-400 tracking-wider">Max Bookings</label>
+                <input 
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={formData.max_appointments}
+                  onChange={(e) => setFormData({ ...formData, max_appointments: e.target.value })}
+                  required
+                  className="bg-slate-50 border border-slate-200 rounded-[12px] px-4 py-3 text-sm focus:outline-none focus:border-[#0ea5e9] transition-colors w-full text-slate-800 font-medium"
+                />
+              </div>
+
+              <button 
+                type="submit"
+                disabled={loading}
+                className="w-full mt-2 bg-gradient-to-r from-[#006590] to-[#0ea5e9] text-white font-bold py-3.5 rounded-[12px] shadow-[0px_10px_20px_rgba(14,165,233,0.2)] hover:opacity-95 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {loading ? 'Creating...' : 'Publish Weekly Slot'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

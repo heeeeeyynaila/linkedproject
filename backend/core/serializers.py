@@ -191,6 +191,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
     doctor_name = serializers.CharField(write_only=True, required=False)
     doctor_full_name = serializers.SerializerMethodField(read_only=True)
     service_name = serializers.SerializerMethodField(read_only=True)
+    patient_full_name = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Appointment
@@ -202,6 +203,11 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
     def get_service_name(self, obj):
         return obj.service.name
+
+    def get_patient_full_name(self, obj):
+        if obj.patient:
+            return f'{obj.patient.user.first_name} {obj.patient.user.last_name}'
+        return f'{obj.guest_first_name} {obj.guest_last_name}'.strip()
 
     def validate_guest_phone(self, value):
         if value:
@@ -265,3 +271,30 @@ class AnnouncementSerializer(serializers.ModelSerializer):
         if len(value.strip()) < 10:
             raise serializers.ValidationError("Announcement content must be at least 10 characters.")
         return value
+
+
+# ========================
+# SHIFT SWAP SERIALIZER
+# ========================
+class ShiftSwapSerializer(serializers.ModelSerializer):
+    requester_name = serializers.SerializerMethodField(read_only=True)
+    receiver_name = serializers.SerializerMethodField(read_only=True)
+    schedule_details = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ShiftSwap
+        fields = '__all__'
+        read_only_fields = ['requester', 'status']
+
+    def get_requester_name(self, obj):
+        return f"Dr. {obj.requester.user.first_name} {obj.requester.user.last_name}"
+
+    def get_receiver_name(self, obj):
+        return f"Dr. {obj.receiver.user.first_name} {obj.receiver.user.last_name}"
+
+    def get_schedule_details(self, obj):
+        return {
+            'day_of_week': obj.schedule.day_of_week,
+            'start_time': obj.schedule.start_time.strftime('%H:%M') if obj.schedule.start_time else '',
+            'end_time': obj.schedule.end_time.strftime('%H:%M') if obj.schedule.end_time else '',
+        }

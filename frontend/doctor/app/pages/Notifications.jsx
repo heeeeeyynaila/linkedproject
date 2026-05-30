@@ -1,20 +1,91 @@
 import { Bell, AlertTriangle, FlaskConical, Monitor, ArrowLeft, Check, X, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '@/services/api';
 
 export default function Notifications() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('All');
+  const [liveAnnouncements, setLiveAnnouncements] = useState([]);
+  const [liveSwaps, setLiveSwaps] = useState([]);
+  const [myDocId, setMyDocId] = useState(null);
 
   const tabs = ['All', 'Patient Alerts', 'Labs', 'System'];
 
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [me, docs, annData, swapData] = await Promise.all([
+          api.auth.me(),
+          api.doctors.list(),
+          api.announcements.list(),
+          api.shiftSwaps.list()
+        ]);
+        const myDoc = docs.find(d => d.email === me.email);
+        if (myDoc) {
+          setMyDocId(myDoc.id);
+        }
+        setLiveAnnouncements(annData || []);
+        setLiveSwaps(swapData || []);
+      } catch (err) {
+        console.error('Failed to load doctor clinical notifications:', err);
+      }
+    }
+    loadData();
+  }, []);
+
+  const swapNotifications = liveSwaps
+    .filter(s => s.requester === myDocId || s.receiver === myDocId)
+    .map(s => {
+      let title = 'Shift Swap Pending';
+      let desc = s.requester === myDocId 
+        ? `Your shift swap request with ${s.receiver_name} is awaiting admin approval.`
+        : `${s.requester_name} requested a shift swap with you.`;
+      let priority = 'warning';
+
+      if (s.status === 'approved') {
+        title = 'Shift Swap Approved';
+        desc = s.requester === myDocId 
+          ? `Your shift swap request with ${s.receiver_name} has been approved by admin.`
+          : `Shift swap request from ${s.requester_name} has been approved by admin.`;
+        priority = 'normal';
+      } else if (s.status === 'rejected') {
+        title = 'Shift Swap Rejected';
+        desc = s.requester === myDocId 
+          ? `Your shift swap request with ${s.receiver_name} was rejected.`
+          : `Shift swap request from ${s.requester_name} was rejected.`;
+        priority = 'critical';
+      }
+
+      return {
+        id: `swap-${s.id}`,
+        title,
+        desc,
+        time: s.created_at ? new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Pending',
+        type: 'System',
+        priority,
+        read: s.status !== 'pending'
+      };
+    });
+
+  const announcementNotifications = liveAnnouncements.map(ann => ({
+    id: `ann-${ann.id}`,
+    title: ann.title || 'Announcement',
+    desc: ann.content,
+    time: ann.published_at ? new Date(ann.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Just now',
+    type: 'System',
+    priority: 'normal',
+    read: false
+  }));
+
   const notifications = [
+    ...swapNotifications,
+    ...announcementNotifications,
     { id: 1, title: 'SpO2 Drop — Leo Harris', desc: 'Room 402 • SpO2 dropped to 89%. Immediate attention required.', time: '2 min ago', type: 'Patient Alerts', priority: 'critical', read: false },
     { id: 2, title: 'Lab Results Ready — Sarah Jenkins', desc: 'Complete Blood Count results available for review.', time: '15 min ago', type: 'Labs', priority: 'normal', read: false },
     { id: 3, title: 'New Patient Registration', desc: 'Alice Turner (P-2024-301) pending intake review.', time: '30 min ago', type: 'System', priority: 'normal', read: false },
     { id: 4, title: 'Heart Rate Elevated — Marcus Lee', desc: 'Room 501 • HR at 104 bpm. Monitor closely.', time: '45 min ago', type: 'Patient Alerts', priority: 'warning', read: true },
     { id: 5, title: 'Imaging Results — Robert Chen', desc: 'CT scan results uploaded. Pulmonary assessment pending.', time: '1 hr ago', type: 'Labs', priority: 'normal', read: true },
-    { id: 6, title: 'Shift Change Approved', desc: 'Your swap request for May 20 has been approved.', time: '2 hr ago', type: 'System', priority: 'normal', read: true },
     { id: 7, title: 'Medication Alert — Emily Watson', desc: 'Scheduled medication due in 30 minutes.', time: '3 hr ago', type: 'Patient Alerts', priority: 'warning', read: true },
     { id: 8, title: 'System Maintenance', desc: 'Scheduled downtime tonight 2:00 AM – 4:00 AM.', time: '5 hr ago', type: 'System', priority: 'normal', read: true },
   ];

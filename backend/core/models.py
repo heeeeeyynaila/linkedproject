@@ -36,6 +36,8 @@ class Doctor(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     service = models.ForeignKey(Service, on_delete=models.PROTECT)
     grade = models.CharField(max_length=21)
+    profile_picture = models.FileField(upload_to="doctors/profiles/", blank=True, null=True)
+    signature = models.FileField(upload_to="doctors/signatures/", blank=True, null=True)
 
     def __str__(self):
         return f"Dr. {self.user.first_name} {self.user.last_name}"
@@ -228,3 +230,22 @@ class AuditLog(models.Model):
 
     def __str__(self):
         return f"{self.performed_by} {self.action} #{self.record_id}"
+
+
+# ----------------------------
+# ShiftSwap
+# ----------------------------
+class ShiftSwap(models.Model):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("rejected", "Rejected"),
+    ]
+    requester = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name="sent_swaps")
+    receiver = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name="received_swaps")
+    schedule = models.ForeignKey(Schedule, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Swap: {self.requester} -> {self.receiver} for {self.schedule}"

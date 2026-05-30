@@ -1,13 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router';
 import { Sidebar } from './Sidebar';
 import { Menu, ChevronLeft } from 'lucide-react';
 import ScrollToTop from '../../../src/components/ScrollToTop';
+import api from '@/services/api';
 
 import { AdminHeader } from './AdminHeader';
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const data = await api.auth.me();
+        localStorage.setItem('user_fullname', data.full_name);
+        localStorage.setItem('user_email', data.email);
+        localStorage.setItem('user_phone', data.phone || '');
+        localStorage.setItem('user_address', data.address || '');
+        localStorage.setItem('user_role', data.role);
+      } catch (err) {
+        console.error('Failed to load profile in admin layout:', err);
+      }
+    }
+    loadProfile();
+  }, []);
 
   return (
     <div className="bg-[#f1f5f9] min-h-screen w-full flex">

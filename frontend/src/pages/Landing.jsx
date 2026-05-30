@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router';
-import { useState } from 'react';
-import { ArrowRight, Upload, Minus, Heart, ChevronDown, X, Activity, LayoutDashboard, Settings, Baby } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowRight, Upload, Minus, Heart, ChevronDown, X, Activity, LayoutDashboard, Settings, Baby, Bell } from 'lucide-react';
+import api from '@/services/api';
 
 const specialties = ['Pulmonologie', 'Hämatologie', 'Nephrologie', 'Kardiologie', 'Neurologie'];
 const experts = ['Dr. Miller', 'Dr. Jenkins', 'Dr. Chen', 'Dr. Watson'];
@@ -52,6 +53,81 @@ const roles = [
   }
 ];
 
+function PublicNotificationsBell() {
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [announcements, setAnnouncements] = useState([]);
+  const bellRef = useRef(null);
+
+  useEffect(() => {
+    async function loadAnnouncements() {
+      try {
+        const data = await api.announcements.list();
+        setAnnouncements(data || []);
+      } catch (err) {
+        console.error('Failed to load announcements:', err);
+      }
+    }
+    loadAnnouncements();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (bellRef.current && !bellRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={bellRef}>
+      <button 
+        onClick={() => setShowNotifications(!showNotifications)}
+        className={`p-2.5 rounded-full transition-all relative border border-[#e5e7eb] ${showNotifications ? 'bg-[#0ea5e9]/10 text-[#0ea5e9]' : 'hover:bg-gray-50 text-[#64748b]'}`}
+      >
+        <Bell className="size-5" />
+        {announcements.length > 0 && (
+          <span className="absolute top-2 right-2 size-2 bg-[#dc2626] border-2 border-white rounded-full animate-pulse"></span>
+        )}
+      </button>
+
+      {showNotifications && (
+        <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-[#e2e8f0] overflow-hidden animate-in fade-in zoom-in duration-200 z-50">
+          <div className="p-4 border-b border-[#e2e8f0] flex items-center justify-between bg-[#f8fafc]">
+            <h3 className="font-bold text-[#171c1f] text-sm">Clinic Announcements</h3>
+            <span className="text-[10px] font-bold text-[#0891b2] uppercase tracking-wider bg-[#0891b2]/10 px-2 py-0.5 rounded-full">
+              {announcements.length} Notice{announcements.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            {announcements.length === 0 ? (
+              <div className="p-8 text-center text-xs text-[#94a3b8]">
+                No public announcements at this time.
+              </div>
+            ) : (
+              announcements.map((ann, idx) => (
+                <div key={ann.id || idx} className="p-4 border-b border-[#f1f5f9] last:border-0 hover:bg-[#f8fafc] transition-colors group">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full text-[#0891b2] bg-[#ecfeff]">
+                      Notice
+                    </span>
+                    <span className="text-[10px] text-[#94a3b8]">
+                      {ann.published_at ? new Date(ann.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Just now"}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-[#171c1f] group-hover:text-[#0891b2] transition-colors line-clamp-2">{ann.title}</h4>
+                  <p className="text-xs text-[#64748b] mt-1 line-clamp-2">{ann.content}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Landing() {
   const navigate = useNavigate();
   const [selectedSpecialty, setSelectedSpecialty] = useState('Pulmonologie');
@@ -92,22 +168,26 @@ export default function Landing() {
           <a href="#" className="text-sm font-medium text-[#4a4a5a] hover:text-[#0891b2] transition-colors">Contact</a>
         </nav>
 
-        {/* Login Button */}
-        {!showLogin ? (
-          <button
-            onClick={() => setShowLogin(true)}
-            className="px-7 py-2.5 bg-[#0891b2] text-white rounded-full text-sm font-semibold hover:bg-[#0e7490] transition-all shadow-md shadow-[#0891b2]/20"
-          >
-            Login
-          </button>
-        ) : (
-          <button
-            onClick={() => setShowLogin(false)}
-            className="px-7 py-2.5 bg-white border border-[#e5e7eb] text-[#4a4a5a] rounded-full text-sm font-semibold hover:bg-gray-50 transition-all"
-          >
-            Back to Home
-          </button>
-        )}
+        {/* Action Controls */}
+        <div className="flex items-center gap-4">
+          <PublicNotificationsBell />
+
+          {!showLogin ? (
+            <button
+              onClick={() => setShowLogin(true)}
+              className="px-7 py-2.5 bg-[#0891b2] text-white rounded-full text-sm font-semibold hover:bg-[#0e7490] transition-all shadow-md shadow-[#0891b2]/20"
+            >
+              Login
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowLogin(false)}
+              className="px-7 py-2.5 bg-white border border-[#e5e7eb] text-[#4a4a5a] rounded-full text-sm font-semibold hover:bg-gray-50 transition-all"
+            >
+              Back to Home
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Main Content */}

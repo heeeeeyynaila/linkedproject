@@ -1,6 +1,10 @@
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router';
+import api from '@/services/api';
 import svgPaths from "./svg-nnlhz6opyo";
 import imgAb6AXuDaJ3DpWfLtb7Iyeg6SrNmSthzVtokV0Qp0MlhXyfll078EVSwezT1CWjfFkevC0TqH42OWoqq9YId8LFqJjtlXv8Jo45UimJa5OKh6XwYmsNmaBz7ZDfxoYpkuh2QIruEkymIFpj6Ttl27MkUcnVjKpwvNwZgh76WyRExfleAhCkIsBo5Y8KgzWxYeJJTq3Tl8Wa20A0LJnQnCxt3BoKrRz1IwhxNumuIhH3JDScN7GebDdhAJtLNr8CyD3Wl7URQwXufZg from "./ff9ee7ed8fdd31d92b06fb137a58c46778c707b1.png";
 import imgProfile from "./e1f3c6a4d972c22173336353463adaa287c4c399.png";
+import { AdminSettingsContext } from './AdminSettingsContext';
 
 function Container2() {
   return (
@@ -225,13 +229,17 @@ function Container14() {
 }
 
 function Button3() {
+  const { handleDownloadPDF } = useContext(AdminSettingsContext);
   return (
-    <div className="bg-[#dfe3e7] content-stretch drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] flex gap-[8px] items-center px-[24px] py-[12px] relative rounded-[12px] shrink-0" data-name="Button">
+    <button 
+      onClick={handleDownloadPDF}
+      className="bg-[#dfe3e7] hover:bg-[#cfd3d7] active:scale-[0.98] transition-all content-stretch drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] flex gap-[8px] items-center px-[24px] py-[12px] relative rounded-[12px] shrink-0 cursor-pointer border-0"
+    >
       <Container14 />
       <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[14px] text-center w-[146.2px]">
         <p className="leading-[20px]">Download Profile PDF</p>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -248,13 +256,18 @@ function Container15() {
 }
 
 function Button4() {
+  const { handleSave, loading } = useContext(AdminSettingsContext);
   return (
-    <div className="bg-[#0ea5e9] content-stretch flex gap-[8px] items-center px-[24px] py-[12px] relative rounded-[12px] shrink-0" data-name="Button">
+    <button 
+      onClick={handleSave}
+      disabled={loading}
+      className="bg-[#0ea5e9] hover:bg-[#0284c7] active:scale-[0.98] transition-all content-stretch flex gap-[8px] items-center px-[24px] py-[12px] relative rounded-[12px] shrink-0 cursor-pointer border-0 disabled:opacity-50"
+    >
       <Container15 />
       <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-center text-white w-[129.86px]">
-        <p className="leading-[20px]">Update Credentials</p>
+        <p className="leading-[20px]">{loading ? "Saving..." : "Update Credentials"}</p>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -366,19 +379,38 @@ function Container16() {
 }
 
 function Container24() {
+  const name = localStorage.getItem('user_fullname') || 'Dr. Julian Arcio';
   return (
     <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px overflow-clip relative" data-name="Container">
       <div className="flex flex-col font-['Inter:Medium',sans-serif] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#0f172a] text-[16px] w-full">
-        <p className="leading-[24px]">Dr. Julian Arcio</p>
+        <p className="leading-[24px]">{name}</p>
       </div>
     </div>
   );
 }
 
 function Input1() {
+  const { firstName, lastName, setFirstName, setLastName } = useContext(AdminSettingsContext);
+  const fullName = `${firstName} ${lastName}`.trim();
+  
+  const handleChange = (e) => {
+    const val = e.target.value;
+    const parts = val.split(' ');
+    const first = parts[0] || '';
+    const last = parts.slice(1).join(' ') || '';
+    setFirstName(first);
+    setLastName(last);
+  };
+
   return (
     <div className="absolute bg-[rgba(248,250,252,0.5)] content-stretch flex items-start justify-center left-0 overflow-clip px-[16px] py-[12px] right-0 rounded-[12px] top-[23px]" data-name="Input">
-      <Container24 />
+      <input 
+        type="text" 
+        value={fullName}
+        onChange={handleChange}
+        className="w-full bg-transparent text-[#0f172a] font-['Inter:Medium',sans-serif] font-medium text-[16px] border-0 outline-none focus:ring-0 focus:outline-none"
+        placeholder="Full Name"
+      />
     </div>
   );
 }
@@ -395,19 +427,28 @@ function Container23() {
 }
 
 function Container26() {
+  const role = localStorage.getItem('user_role');
+  const spec = role === 'admin' ? 'System Administrator' : 'Molecular Oncology & Precision Medicine';
   return (
     <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px overflow-clip relative" data-name="Container">
       <div className="flex flex-col font-['Inter:Medium',sans-serif] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#0f172a] text-[16px] w-full">
-        <p className="leading-[24px]">{`Molecular Oncology & Precision Medicine`}</p>
+        <p className="leading-[24px]">{spec}</p>
       </div>
     </div>
   );
 }
 
 function Input2() {
+  const role = localStorage.getItem('user_role');
+  const spec = role === 'admin' ? 'System Administrator' : 'Molecular Oncology & Precision Medicine';
   return (
     <div className="absolute bg-[rgba(248,250,252,0.5)] content-stretch flex items-start justify-center left-0 overflow-clip px-[16px] py-[12px] right-0 rounded-[12px] top-[23px]" data-name="Input">
-      <Container26 />
+      <input 
+        type="text" 
+        value={spec}
+        readOnly
+        className="w-full bg-transparent text-[#64748b] font-['Inter:Medium',sans-serif] font-medium text-[16px] border-0 outline-none cursor-not-allowed"
+      />
     </div>
   );
 }
@@ -424,19 +465,26 @@ function Container25() {
 }
 
 function Container28() {
+  const email = localStorage.getItem('user_email') || 'j.arcio@clinical-sanctuary.com';
   return (
     <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px overflow-clip relative" data-name="Container">
       <div className="flex flex-col font-['Inter:Medium',sans-serif] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#0f172a] text-[16px] w-full">
-        <p className="leading-[24px]">j.arcio@clinical-sanctuary.com</p>
+        <p className="leading-[24px]">{email}</p>
       </div>
     </div>
   );
 }
 
 function Input3() {
+  const { email } = useContext(AdminSettingsContext);
   return (
     <div className="absolute bg-[rgba(248,250,252,0.5)] content-stretch flex items-start justify-center left-0 overflow-clip px-[16px] py-[12px] right-0 rounded-[12px] top-[23px]" data-name="Input">
-      <Container28 />
+      <input 
+        type="email" 
+        value={email}
+        readOnly
+        className="w-full bg-transparent text-[#64748b] font-['Inter:Medium',sans-serif] font-medium text-[16px] border-0 outline-none cursor-not-allowed"
+      />
     </div>
   );
 }
@@ -453,19 +501,27 @@ function Container27() {
 }
 
 function Container30() {
+  const phone = localStorage.getItem('user_phone') || '+1 (555) 012-9843';
   return (
     <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-w-px overflow-clip relative" data-name="Container">
       <div className="flex flex-col font-['Inter:Medium',sans-serif] font-medium justify-center leading-[0] not-italic relative shrink-0 text-[#0f172a] text-[16px] w-full">
-        <p className="leading-[24px]">+1 (555) 012-9843</p>
+        <p className="leading-[24px]">{phone}</p>
       </div>
     </div>
   );
 }
 
 function Input4() {
+  const { phone, setPhone } = useContext(AdminSettingsContext);
   return (
     <div className="absolute bg-[rgba(248,250,252,0.5)] content-stretch flex items-start justify-center left-0 overflow-clip px-[16px] py-[12px] right-0 rounded-[12px] top-[23px]" data-name="Input">
-      <Container30 />
+      <input 
+        type="text" 
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        className="w-full bg-transparent text-[#0f172a] font-['Inter:Medium',sans-serif] font-medium text-[16px] border-0 outline-none focus:ring-0 focus:outline-none"
+        placeholder="Phone Number"
+      />
     </div>
   );
 }
@@ -549,16 +605,42 @@ function Margin3() {
 }
 
 function OverlayBorder() {
+  const { signature, setSignature } = useContext(AdminSettingsContext);
+  
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSignature(reader.result); // store as base64
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
-    <div className="bg-[rgba(248,250,252,0.5)] relative rounded-[16px] shrink-0 w-full" data-name="Overlay+Border">
+    <div className="bg-[rgba(248,250,252,0.5)] relative rounded-[16px] shrink-0 w-full min-h-[160px] flex items-center justify-center overflow-hidden hover:bg-[rgba(248,250,252,0.8)] transition-all animate-pulse" data-name="Overlay+Border">
       <div aria-hidden="true" className="absolute border border-[#e2e8f0] border-dashed inset-0 pointer-events-none rounded-[16px]" />
-      <div className="flex flex-col items-center justify-center size-full">
-        <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col items-center justify-center p-[25px] relative size-full">
-          <Margin2 />
-          <Container32 />
-          <Margin3 />
-        </div>
-      </div>
+      <label className="flex flex-col items-center justify-center cursor-pointer size-full p-[25px] z-10">
+        <input 
+          type="file" 
+          accept="image/*" 
+          className="hidden" 
+          onChange={handleFileChange} 
+        />
+        {signature ? (
+          <div className="flex flex-col items-center justify-center gap-[8px]">
+            <img src={signature} alt="Digital Signature" className="max-h-[80px] object-contain select-none" />
+            <span className="text-[12px] text-[#0ea5e9] font-medium hover:underline">Click to change signature</span>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center">
+            <Margin2 />
+            <Container32 />
+            <Margin3 />
+          </div>
+        )}
+      </label>
     </div>
   );
 }
@@ -1811,20 +1893,23 @@ function Profile() {
 }
 
 function Container105() {
+  const name = localStorage.getItem('user_fullname') || 'Dr. Julian Arcio';
   return (
     <div className="content-stretch flex flex-col items-start overflow-clip relative shrink-0 w-full" data-name="Container">
       <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[16px] justify-center leading-[0] not-italic relative shrink-0 text-[#0f172a] text-[12px] w-[87.8px]">
-        <p className="leading-[16px]">Dr. Julian Arcio</p>
+        <p className="leading-[16px]">{name}</p>
       </div>
     </div>
   );
 }
 
 function Container106() {
+  const role = localStorage.getItem('user_role');
+  const roleText = role === 'admin' ? 'System Administrator' : 'Chief Medical Officer';
   return (
     <div className="content-stretch flex flex-col items-start overflow-clip relative shrink-0 w-full" data-name="Container">
-      <div className="flex flex-col font-['Inter:Regular',sans-serif] font-normal h-[15px] justify-center leading-[0] not-italic relative shrink-0 text-[#64748b] text-[10px] w-[100.45px]">
-        <p className="leading-[15px]">Chief Medical Officer</p>
+      <div className="flex flex-col font-['Inter:Regular',sans-serif] font-normal h-[15px] justify-center leading-[0] not-italic relative shrink-0 text-[#64748b] text-[10px] w-full">
+        <p className="leading-[15px]">{roleText}</p>
       </div>
     </div>
   );
@@ -1877,11 +1962,167 @@ function AsideSidebarNavigation() {
 }
 
 export default function ArcioSettingsRedesigned() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [signature, setSignature] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Load user profile details on mount
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const profile = await api.auth.me();
+        if (profile) {
+          if (profile.full_name) {
+            const parts = profile.full_name.split(' ');
+            setFirstName(parts[0] || '');
+            setLastName(parts.slice(1).join(' ') || '');
+          } else {
+            setFirstName(profile.first_name || '');
+            setLastName(profile.last_name || '');
+          }
+          setEmail(profile.email || '');
+          setPhone(profile.phone || '');
+          
+          const localSig = localStorage.getItem('user_signature');
+          if (profile.signature) {
+            setSignature(profile.signature);
+          } else if (localSig) {
+            setSignature(localSig);
+          }
+          
+          localStorage.setItem('user_fullname', profile.full_name || `${profile.first_name} ${profile.last_name}`.trim());
+          localStorage.setItem('user_email', profile.email || '');
+          localStorage.setItem('user_phone', profile.phone || '');
+        }
+      } catch (err) {
+        console.error("Failed to load settings profile:", err);
+      }
+    }
+    loadProfile();
+  }, []);
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      if (signature && signature.startsWith('data:image')) {
+        localStorage.setItem('user_signature', signature);
+      }
+
+      const data = {
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone
+      };
+      
+      const res = await api.auth.updateProfile(data);
+      if (res) {
+        localStorage.setItem('user_fullname', `${firstName} ${lastName}`.trim());
+        localStorage.setItem('user_phone', phone);
+        alert("Credentials updated successfully!");
+      }
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      alert(err.message || "Failed to update credentials. Please check phone format (digits only, 7-15 chars).");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    const printWindow = window.open('', '_blank');
+    const roleText = localStorage.getItem('user_role') === 'admin' ? 'System Administrator' : 'Chief Medical Officer';
+    const fullName = `${firstName} ${lastName}`.trim() || 'Dr. Julian Arcio';
+    const signatureHtml = signature ? `<img src="${signature}" style="max-height: 80px; margin-top: 10px;" />` : `<div style="border-bottom: 1px dashed #94a3b8; width: 200px; height: 40px; margin-top: 10px;"></div>`;
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Arcio Network - Executive Profile</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #0f172a; line-height: 1.6; }
+            .header { border-bottom: 2px solid #0ea5e9; padding-bottom: 20px; margin-bottom: 40px; }
+            .title { font-size: 28px; font-weight: 800; color: #0369a1; margin: 0; }
+            .subtitle { font-size: 14px; color: #64748b; margin: 5px 0 0 0; text-transform: uppercase; letter-spacing: 1px; }
+            .section { margin-bottom: 30px; }
+            .section-title { font-size: 18px; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; color: #1e293b; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .field { margin-bottom: 15px; }
+            .label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.5px; }
+            .value { font-size: 15px; font-weight: 500; margin-top: 4px; }
+            .signature-area { margin-top: 50px; }
+            .footer { margin-top: 100px; font-size: 11px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1 class="title">Clinical Sanctuary</h1>
+            <p class="subtitle">Official Executive Credentials Dossier</p>
+          </div>
+          <div class="section">
+            <h2 class="section-title">Personal Information</h2>
+            <div class="grid">
+              <div class="field">
+                <div class="label">Full Name</div>
+                <div class="value">${fullName}</div>
+              </div>
+              <div class="field">
+                <div class="label">Role Assignment</div>
+                <div class="value">${roleText}</div>
+              </div>
+              <div class="field">
+                <div class="label">Contact Email</div>
+                <div class="value">${email || 'j.arcio@clinical-sanctuary.com'}</div>
+              </div>
+              <div class="field">
+                <div class="label">Secure Telephone</div>
+                <div class="value">${phone || '+1 (555) 012-9843'}</div>
+              </div>
+            </div>
+          </div>
+          <div class="section signature-area">
+            <h2 class="section-title">Authorized Digital Signature</h2>
+            <p style="font-size: 12px; color: #64748b;">This signature certifies identity and authority on secure network protocols.</p>
+            ${signatureHtml}
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 5px;">Authenticated & Verified Signature Token</div>
+          </div>
+          <div class="footer">
+            Arcio Network Systems • Confidential Executive Record • Generated ${new Date().toLocaleDateString()}
+          </div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const contextValue = {
+    firstName,
+    setFirstName,
+    lastName,
+    setLastName,
+    email,
+    setEmail,
+    phone,
+    setPhone,
+    signature,
+    setSignature,
+    handleSave,
+    handleDownloadPDF,
+    loading
+  };
+
   return (
-    <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start pl-[256px] relative size-full" data-name="Arcio Settings (Redesigned)">
-      <MainContentArea />
-      <AsideSidebarNavigation />
-    </div>
+    <AdminSettingsContext.Provider value={contextValue}>
+      <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start pl-[256px] relative size-full" data-name="Arcio Settings (Redesigned)">
+        <MainContentArea />
+        <AsideSidebarNavigation />
+      </div>
+    </AdminSettingsContext.Provider>
   );
 }
 

@@ -515,12 +515,13 @@ function Container23() {
 }
 
 function Heading1() {
+  const activeChildName = localStorage.getItem('active_child_name') || 'Patient';
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Heading 1">
       <div className="flex flex-col font-['Manrope:ExtraBold',sans-serif] font-extrabold justify-center leading-tight relative shrink-0 text-[#171c1f] text-2xl tracking-[-0.75px] w-full">
         <p className="mb-1">
           <span className="">{`Hello, `}</span>
-          <span className="text-[#006590]">John Sterling.</span>
+          <span className="text-[#006590]">{activeChildName}.</span>
         </p>
         <p className="text-base font-medium text-[#64748b] leading-tight">Your health summary at a glance.</p>
       </div>
@@ -892,11 +893,12 @@ function Heading5() {
 }
 
 function Container43() {
+  const activeChildFirstName = (localStorage.getItem('active_child_name') || 'Patient').split(' ')[0];
   return (
     <div className="absolute content-stretch flex flex-col items-start left-0 pb-[0.625px] right-0 top-[102.88px]" data-name="Container">
       <div className="flex flex-col font-['Inter:Medium',sans-serif] font-medium h-[46px] justify-center leading-[0] not-italic relative shrink-0 text-[14px] text-[rgba(255,255,255,0.8)] w-[228.95px]">
-        <p className="leading-[22.75px] mb-0">Leo is due for his Measles booster</p>
-        <p className="leading-[22.75px]">in 12 days.</p>
+        <p className="leading-[22.75px] mb-0">{activeChildFirstName} is due for booster shot</p>
+        <p className="leading-[22.75px]">soon.</p>
       </div>
     </div>
   );

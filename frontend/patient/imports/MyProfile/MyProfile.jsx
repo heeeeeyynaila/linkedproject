@@ -354,10 +354,11 @@ function PatientProfileAvatar() {
 }
 
 function Container20() {
+  const fullname = localStorage.getItem('user_fullname') || 'Elena Rodriguez';
   return (
     <div className="content-stretch flex flex-col items-start overflow-clip relative shrink-0 w-full" data-name="Container">
-      <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#0f172a] text-[14px] w-[109.36px]">
-        <p className="leading-[20px]">Elena Rodriguez</p>
+      <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#0f172a] text-[14px] w-full">
+        <p className="leading-[20px]">{fullname}</p>
       </div>
     </div>
   );
@@ -555,10 +556,11 @@ function Heading2() {
 }
 
 function Container32() {
+  const fullname = localStorage.getItem('user_fullname') || 'Elena Rodriguez';
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Container">
-      <div className="flex flex-col font-['Inter:Regular',sans-serif] font-normal h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#64748b] text-[14px] w-[224.3px]">
-        <p className="leading-[20px]">Elena Rodriguez (Account Owner)</p>
+      <div className="flex flex-col font-['Inter:Regular',sans-serif] font-normal h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#64748b] text-[14px] w-full">
+        <p className="leading-[20px]">{fullname} (Account Owner)</p>
       </div>
     </div>
   );
@@ -603,11 +605,12 @@ function Label() {
 }
 
 function HorizontalBorder() {
+  const fullname = localStorage.getItem('user_fullname') || 'Elena Sofia Rodriguez';
   return (
     <div className="content-stretch flex flex-col items-start pb-[9px] relative shrink-0 w-full" data-name="HorizontalBorder">
       <div aria-hidden="true" className="absolute border-[rgba(226,232,240,0.5)] border-b border-solid inset-0 pointer-events-none" />
-      <div className="flex flex-col font-['Manrope:Medium',sans-serif] font-medium h-[28px] justify-center leading-[0] relative shrink-0 text-[#1a1a1a] text-[18px] w-[183.17px]">
-        <p className="leading-[28px]">Elena Sofia Rodriguez</p>
+      <div className="flex flex-col font-['Manrope:Medium',sans-serif] font-medium h-[28px] justify-center leading-[0] relative shrink-0 text-[#1a1a1a] text-[18px] w-full">
+        <p className="leading-[28px]">{fullname}</p>
       </div>
     </div>
   );
@@ -663,11 +666,12 @@ function Label2() {
 }
 
 function Container37() {
+  const phone = localStorage.getItem('user_phone') || '+1 (555) 902-4821';
   return (
     <div className="flex-[1_0_0] min-w-px relative" data-name="Container">
       <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col items-start overflow-clip relative rounded-[inherit] size-full">
         <div className="flex flex-col font-['Manrope:Medium',sans-serif] font-medium justify-center leading-[0] relative shrink-0 text-[#1a1a1a] text-[18px] w-full">
-          <p className="leading-[28px]">+1 (555) 902-4821</p>
+          <p className="leading-[28px]">{phone}</p>
         </div>
       </div>
     </div>
@@ -707,11 +711,12 @@ function Label3() {
 }
 
 function HorizontalBorder2() {
+  const email = localStorage.getItem('user_email') || 'elena.rodriguez@example.com';
   return (
     <div className="content-stretch flex flex-col items-start pb-[9px] relative shrink-0 w-full" data-name="HorizontalBorder">
       <div aria-hidden="true" className="absolute border-[rgba(226,232,240,0.5)] border-b border-solid inset-0 pointer-events-none" />
-      <div className="flex flex-col font-['Manrope:Medium',sans-serif] font-medium h-[28px] justify-center leading-[0] relative shrink-0 text-[#1a1a1a] text-[18px] w-[260.78px]">
-        <p className="leading-[28px]">elena.rodriguez@example.com</p>
+      <div className="flex flex-col font-['Manrope:Medium',sans-serif] font-medium h-[28px] justify-center leading-[0] relative shrink-0 text-[#1a1a1a] text-[18px] w-full">
+        <p className="leading-[28px]">{email}</p>
       </div>
     </div>
   );
@@ -737,11 +742,12 @@ function Label4() {
 }
 
 function Container40() {
+  const address = localStorage.getItem('user_address') || '742 Evergreen Terrace, Suite 104, Springfield, OR 97403';
   return (
     <div className="flex-[1_0_0] min-w-px relative" data-name="Container">
       <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex flex-col items-start overflow-clip relative rounded-[inherit] size-full">
         <div className="flex flex-col font-['Manrope:Medium',sans-serif] font-medium justify-center leading-[0] relative shrink-0 text-[#1a1a1a] text-[18px] w-full">
-          <p className="leading-[28px]">742 Evergreen Terrace, Suite 104, Springfield, OR 97403</p>
+          <p className="leading-[28px]">{address}</p>
         </div>
       </div>
     </div>

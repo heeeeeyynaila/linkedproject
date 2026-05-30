@@ -12,6 +12,7 @@ urlpatterns = [
     path('change-password/', views.change_password),
     path('my-profile/', views.my_profile),
     path('my-profile/update/', views.update_profile),
+    path('my-profile/doctor-images/', views.update_doctor_images),
 
     # ========================
     # SERVICES
@@ -114,8 +115,12 @@ urlpatterns = [
     path('patients/<int:patient_id>/vaccinations/<int:record_id>/update/', views.vaccination_update),
     path('patients/<int:patient_id>/vaccinations/<int:record_id>/delete/', views.vaccination_delete),
 
-    # ========================
-    # ADMIN DASHBOARD
-    # ========================
     path('dashboard/', views.admin_dashboard),
+
+    # ========================
+    # SHIFT SWAPS
+    # ========================
+    path('shift-swaps/', views.shift_swap_list),
+    path('shift-swaps/create/', views.shift_swap_create),
+    path('shift-swaps/<int:pk>/status/', views.shift_swap_status),
 ]

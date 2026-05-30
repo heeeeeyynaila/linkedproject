@@ -1,4 +1,6 @@
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router';
+import api from '@/services/api';
 import svgPaths from "./svg-gv4e5tx1xn";
 import imgAdmin from "./df42b1b83fbfce3ee4296311770dc881bbb03502.png";
 import imgDrSarahJenkins from "./1125ef398d5a29a45638fb3dcc6a45c07a606aec.png";
@@ -7,6 +9,7 @@ import imgDrElenaRodriguez from "./1e0112efe6bb739d4f069599e3187d46c786aecf.png"
 import imgDrDavidKim from "./9d20d819191eaf93a1b3937e94e0fc734a52c65e.png";
 import imgDrSamanthaLee from "./26d8370d4db60b0a0b9e380b211d36e679cd9808.png";
 import imgDrMichaelFoster from "./b93734bd8467b9c5416df9d8aed9bcf91f4e68b3.png";
+import { AdminDoctorsContext } from './AdminDoctorsContext';
 
 function Container2() {
   return (
@@ -123,10 +126,11 @@ function Admin() {
 }
 
 function Container7() {
+  const adminName = localStorage.getItem('user_fullname') || 'Dr. Arcio';
   return (
     <div className="content-stretch flex flex-col items-center relative shrink-0" data-name="Container">
       <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#0f172a] text-[14px] text-center w-[58.28px]">
-        <p className="leading-[20px]">Dr. Arcio</p>
+        <p className="leading-[20px]">{adminName}</p>
       </div>
     </div>
   );
@@ -1331,15 +1335,91 @@ function AddDoctorWidget() {
   );
 }
 
-function BentoGridDoctors() {
+function DynamicDoctorCard({ doctor }) {
   return (
-    <div className="gap-x-[32px] gap-y-[32px] grid grid-cols-[repeat(3,minmax(0,1fr))] grid-rows-[__381px_381px] relative shrink-0 w-full" data-name="Bento Grid - Doctors">
-      <DoctorCard />
-      <DoctorCard1 />
-      <DoctorCard2 />
-      <DoctorCard3 />
-      <DoctorCard4 />
-      <DoctorCard5 />
+    <div className="backdrop-blur-[8px] bg-[rgba(246,250,254,0.7)] hover:bg-[rgba(246,250,254,0.9)] hover:scale-[1.02] transition-all duration-300 drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)] h-[381px] justify-self-stretch relative rounded-[32px] shrink-0 p-8 flex flex-col justify-between" data-name="Doctor Card">
+      <div className="flex flex-col items-center">
+        <div className="size-24 rounded-full bg-gradient-to-br from-[#006591] to-[#0ea5e9] border-4 border-white shadow-md flex items-center justify-center text-white text-3xl font-bold font-[Inter] mb-4">
+          {doctor.first_name ? doctor.first_name[0].toUpperCase() : 'D'}
+        </div>
+        <h3 className="font-['Inter:Semi_Bold',sans-serif] font-semibold text-[#1a1a1a] text-[20px] text-center mb-1 leading-tight">
+          {doctor.full_name || `Dr. ${doctor.first_name} ${doctor.last_name}`}
+        </h3>
+        <span className="font-['Inter:Semi_Bold',sans-serif] font-semibold text-[#0284c7] text-[12px] tracking-[1.2px] uppercase text-center mb-3">
+          {doctor.service || "Pediatrics"}
+        </span>
+        <span className="text-xs text-[#64748b] bg-slate-100 px-3 py-1 rounded-full font-medium">
+          {doctor.grade || "Clinical Practitioner"}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 mt-2">
+        <div className="flex flex-col items-center justify-center text-center border-r border-slate-100">
+          <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Email</span>
+          <span className="text-[11px] font-semibold text-[#334155] truncate max-w-[120px]" title={doctor.email}>
+            {doctor.email || "N/A"}
+          </span>
+        </div>
+        <div className="flex flex-col items-center justify-center text-center">
+          <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">Phone</span>
+          <span className="text-[11px] font-semibold text-[#334155]">
+            {doctor.phone || "N/A"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionPageHeader() {
+  const { doctors, handleDownloadPDF } = useContext(AdminDoctorsContext);
+  const navigate = useNavigate();
+
+  return (
+    <div className="relative rounded-[32px] shrink-0 w-full bg-gradient-to-r from-slate-100 to-[#f0f9ff]" data-name="Section - Page Header & Branding">
+      <div className="flex flex-row items-center overflow-clip rounded-[inherit] size-full">
+        <div className="content-stretch flex justify-between items-center p-[33px] relative size-full flex-wrap gap-4 w-full">
+          <div className="absolute bg-[rgba(186,230,253,0.2)] blur-[32px] bottom-[-79px] right-[-79px] rounded-[9999px] size-[256px]" data-name="Decorative element" />
+          
+          <div className="relative shrink-0 flex gap-[16px] items-center">
+            <div className="content-stretch flex flex-col items-start relative shrink-0">
+              <h1 className="font-['Manrope:Extra_Bold',sans-serif] font-extrabold text-[#0f172a] text-[30px] leading-tight mb-1">
+                Practitioner Roster
+              </h1>
+              <p className="font-['Inter:Medium',sans-serif] font-medium text-[#64748b] text-[12px] tracking-[1px] uppercase">
+                Arcio Clinical Sanctuary Directory ({doctors.length} Registered)
+              </p>
+            </div>
+          </div>
+
+          <div className="relative shrink-0 flex gap-4 items-center z-10">
+            <button 
+              onClick={handleDownloadPDF}
+              className="bg-[#006591] hover:bg-[#005276] active:scale-[0.98] transition-all content-stretch flex items-center justify-center pb-[12px] pt-[11px] px-[20px] rounded-xl shrink-0 cursor-pointer font-['Inter:Semi_Bold',sans-serif] font-semibold text-sm text-white shadow-md shadow-[#006591]/10"
+            >
+              Download PDF Directory
+            </button>
+            <button 
+              onClick={() => navigate('/admin/add-doctor')}
+              className="bg-white border border-[#cbd5e1] hover:bg-slate-50 active:scale-[0.98] transition-all content-stretch flex items-center justify-center pb-[12px] pt-[11px] px-[20px] rounded-xl shrink-0 cursor-pointer font-['Inter:Semi_Bold',sans-serif] font-semibold text-sm text-[#0f172a] shadow-sm"
+            >
+              + Register Doctor
+            </button>
+          </div>
+        </div>
+      </div>
+      <div aria-hidden="true" className="absolute border border-[rgba(226,232,240,0.3)] border-solid inset-0 pointer-events-none rounded-[32px]" />
+    </div>
+  );
+}
+
+function BentoGridDoctors() {
+  const { doctors } = useContext(AdminDoctorsContext);
+
+  return (
+    <div className="gap-x-[32px] gap-y-[32px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 relative shrink-0 w-full" data-name="Bento Grid - Doctors">
+      {doctors.map(doctor => (
+        <DynamicDoctorCard key={doctor.id} doctor={doctor} />
+      ))}
       <AddDoctorWidget />
     </div>
   );
@@ -2023,11 +2103,161 @@ function AsideSidebarNavigation() {
 }
 
 export default function ArcioDoctorsRedesigned() {
+  const [doctors, setDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDoctors() {
+      try {
+        setLoading(true);
+        const data = await api.doctors.list();
+        setDoctors(data || []);
+      } catch (err) {
+        console.error('Failed to load doctors roster:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDoctors();
+  }, []);
+
+  const handleDownloadPDF = () => {
+    const printWindow = window.open('', '_blank');
+    const html = `
+      <html>
+        <head>
+          <title>Arcio Clinical Portal - Staff Directory</title>
+          <style>
+            body {
+              font-family: 'Inter', sans-serif;
+              padding: 40px;
+              color: #0f172a;
+            }
+            .header {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              border-bottom: 2px solid #e2e8f0;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .title {
+              font-size: 24px;
+              font-weight: 800;
+              margin: 0;
+              color: #006591;
+            }
+            .subtitle {
+              font-size: 14px;
+              color: #64748b;
+              margin: 5px 0 0 0;
+            }
+            .date {
+              font-size: 12px;
+              color: #64748b;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+            th, td {
+              text-align: left;
+              padding: 12px 16px;
+              border-bottom: 1px solid #e2e8f0;
+            }
+            th {
+              background-color: #f8fafc;
+              color: #64748b;
+              font-size: 11px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            }
+            td {
+              font-size: 13px;
+              color: #334155;
+            }
+            .name {
+              font-weight: 600;
+              color: #0f172a;
+            }
+            .specialty {
+              color: #0284c7;
+              font-weight: 500;
+            }
+            .footer {
+              margin-top: 50px;
+              text-align: center;
+              font-size: 11px;
+              color: #94a3b8;
+              border-top: 1px solid #e2e8f0;
+              padding-top: 20px;
+            }
+            @media print {
+              body { padding: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1 class="title">Arcio Clinical Sanctuary</h1>
+              <p class="subtitle">Official Practitioner & Staff Directory</p>
+            </div>
+            <div class="date">
+              Generated: ${new Date().toLocaleDateString()}
+            </div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Department / Service</th>
+                <th>Grade</th>
+                <th>Email</th>
+                <th>Phone</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${doctors.map(d => `
+                <tr>
+                  <td class="name">${d.full_name || `Dr. ${d.first_name} ${d.last_name}`}</td>
+                  <td class="specialty">${d.service || "Pediatrics"}</td>
+                  <td>${d.grade || "Clinical Practitioner"}</td>
+                  <td>${d.email || "N/A"}</td>
+                  <td>${d.phone || "N/A"}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="footer">
+            &copy; ${new Date().getFullYear()} Arcio Healthcare Systems. Confidential & Restricted.
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
-    <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative size-full min-h-screen" data-name="Arcio Doctors (Redesigned)">
-      <div className="absolute bg-[rgba(186,230,253,0.2)] blur-[60px] right-0 rounded-[9999px] size-[600px] top-0" data-name="Background Elements for Glass Effects" />
-      <div className="absolute bg-[rgba(203,213,225,0.2)] blur-[50px] bottom-0 left-0 rounded-[9999px] size-[400px]" data-name="Overlay+Blur" />
-      <MainContentArea />
-    </div>
+    <AdminDoctorsContext.Provider value={{ doctors, handleDownloadPDF }}>
+      <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative size-full min-h-screen" data-name="Arcio Doctors (Redesigned)">
+        <div className="absolute bg-[rgba(186,230,253,0.2)] blur-[60px] right-0 rounded-[9999px] size-[600px] top-0" data-name="Background Elements for Glass Effects" />
+        <div className="absolute bg-[rgba(203,213,225,0.2)] blur-[50px] bottom-0 left-0 rounded-[9999px] size-[400px]" data-name="Overlay+Blur" />
+        <MainContentArea />
+      </div>
+    </AdminDoctorsContext.Provider>
   );
 }

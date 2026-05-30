@@ -6,13 +6,54 @@ import {
 import { useState, useRef, useEffect } from 'react';
 import ScrollToTop from '../../../src/components/ScrollToTop';
 import { ArcioLogo } from '../../../src/components/ArcioLogo';
+import api from '@/services/api';
 
 export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [profile, setProfile] = useState(null);
   const notifRef = useRef(null);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const data = await api.auth.me();
+        setProfile(data);
+      } catch (err) {
+        console.error('Failed to fetch layout profile:', err);
+      }
+    }
+    fetchProfile();
+  }, []);
+
+  const [announcements, setAnnouncements] = useState([]);
+  const [swaps, setSwaps] = useState([]);
+  const [myDocId, setMyDocId] = useState(null);
+
+  useEffect(() => {
+    async function loadAnnouncementsAndSwaps() {
+      try {
+        const [me, docs, annData, swapData] = await Promise.all([
+          api.auth.me(),
+          api.doctors.list(),
+          api.announcements.list(),
+          api.shiftSwaps.list()
+        ]);
+        
+        const myDoc = docs.find(d => d.email === me.email);
+        if (myDoc) {
+          setMyDocId(myDoc.id);
+        }
+        setAnnouncements(annData || []);
+        setSwaps(swapData || []);
+      } catch (err) {
+        console.error('Failed to load announcements and swaps in doctor Layout:', err);
+      }
+    }
+    loadAnnouncementsAndSwaps();
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -24,12 +65,61 @@ export default function Layout() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const swapNotifications = swaps
+    .filter(s => s.requester === myDocId || s.receiver === myDocId)
+    .map(s => {
+      let title = 'Shift Swap';
+      let desc = '';
+      let color = 'text-[#f59e0b] bg-[#fef3c7]';
+      let icon = AlertCircle;
+
+      if (s.status === 'approved') {
+        title = 'Shift Swap Approved';
+        desc = s.requester === myDocId 
+          ? `Your shift swap with ${s.receiver_name} has been approved by admin.`
+          : `Shift swap request from ${s.requester_name} has been approved.`;
+        color = 'text-[#10b981] bg-[#ecfdf5]';
+        icon = CheckCircle;
+      } else if (s.status === 'rejected') {
+        title = 'Shift Swap Rejected';
+        desc = s.requester === myDocId 
+          ? `Your shift swap with ${s.receiver_name} was rejected.`
+          : `Shift swap request from ${s.requester_name} was rejected.`;
+        color = 'text-[#ef4444] bg-[#fee2e2]';
+        icon = AlertCircle;
+      } else {
+        title = 'Shift Swap Pending';
+        desc = s.requester === myDocId 
+          ? `Swap request with ${s.receiver_name} is awaiting admin approval.`
+          : `${s.requester_name} wants to swap shift with you.`;
+        color = 'text-[#f59e0b] bg-[#fef3c7]';
+        icon = Clock;
+      }
+
+      return {
+        title,
+        time: s.created_at ? new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Pending',
+        desc,
+        icon,
+        color,
+        isSwap: true
+      };
+    });
+
   const notifications = [
-    { title: 'New Appointment Scheduled', time: '5m ago', icon: Calendar, color: 'text-[#0ea5e9] bg-[#e0f2fe]' },
-    { title: 'New Patient Registration', time: '15m ago', icon: UserPlus, color: 'text-[#10b981] bg-[#ecfdf5]' },
-    { title: 'System Alert: High Volume', time: '1h ago', icon: AlertCircle, color: 'text-[#f59e0b] bg-[#fef3c7]' },
-    { title: 'Lab Results Ready', time: '2h ago', icon: CheckCircle, color: 'text-[#059669] bg-[#ecfdf5]' },
-    { title: 'Appointment Reminder', time: '3h ago', icon: Clock, color: 'text-[#8b5cf6] bg-[#ede9fe]' },
+    ...swapNotifications,
+    ...announcements.map((ann, idx) => ({
+      title: ann.title || ann.content,
+      time: ann.published_at ? new Date(ann.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "Just now",
+      desc: ann.content,
+      icon: AlertCircle,
+      color: 'text-[#0ea5e9] bg-[#e0f2fe]'
+    })),
+    { title: 'New Appointment Scheduled', desc: 'Patient scheduled online consultation', time: '5m ago', icon: Calendar, color: 'text-[#0ea5e9] bg-[#e0f2fe]' },
+    { title: 'New Patient Registration', desc: 'New profile waiting for active review', time: '15m ago', icon: UserPlus, color: 'text-[#10b981] bg-[#ecfdf5]' },
+    { title: 'System Alert: High Volume', desc: 'Clinic capacity warning', time: '1h ago', icon: AlertCircle, color: 'text-[#f59e0b] bg-[#fef3c7]' },
+    { title: 'Lab Results Ready', desc: 'Patient hematology results prepared', time: '2h ago', icon: CheckCircle, color: 'text-[#059669] bg-[#ecfdf5]' },
+    { title: 'Appointment Reminder', desc: 'Weekly clinician review scheduled', time: '3h ago', icon: Clock, color: 'text-[#8b5cf6] bg-[#ede9fe]' },
   ];
 
   const navigation = [
@@ -80,12 +170,18 @@ export default function Layout() {
             <div className="flex flex-col gap-3">
               <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
                 <div className="size-9 rounded-full bg-gradient-to-br from-[#006591] to-[#0ea5e9] border-2 border-[#e0f2fe] flex items-center justify-center shrink-0">
-                  <span className="text-white font-bold text-xs">DA</span>
+                  <span className="text-white font-bold text-xs">
+                    {profile?.full_name ? profile.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'DR'}
+                  </span>
                 </div>
                 {!collapsed && (
                   <div className="overflow-hidden">
-                    <div className="text-xs font-bold text-[#171c1f] truncate">Dr. Arcio</div>
-                    <div className="text-[10px] text-[#64748b] truncate">Senior Doctor</div>
+                    <div className="text-xs font-bold text-[#171c1f] truncate">
+                      {profile?.full_name ? `Dr. ${profile.full_name.replace('Dr. ', '')}` : 'Doctor'}
+                    </div>
+                    <div className="text-[10px] text-[#64748b] truncate">
+                      {profile?.grade || 'Clinical Practitioner'}
+                    </div>
                   </div>
                 )}
               </div>
@@ -156,6 +252,7 @@ export default function Layout() {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-[#334155] group-hover:text-[#0ea5e9] transition-colors">{n.title}</p>
+                            {n.desc && <p className="text-xs text-[#64748b] mt-0.5 leading-normal">{n.desc}</p>}
                             <p className="text-xs text-[#94a3b8] mt-0.5">{n.time}</p>
                           </div>
                         </div>
@@ -174,10 +271,16 @@ export default function Layout() {
             <div className="h-10 w-px bg-[#e2e8f0]" />
             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/doctor/settings')}>
               <div className="text-right">
-                <div className="font-semibold text-sm text-[#171c1f]">Dr. Arcio</div>
-                <div className="font-semibold text-xs text-[#64748b] uppercase">Senior Doctor</div>
+                <div className="font-semibold text-sm text-[#171c1f]">
+                  {profile?.full_name ? `Dr. ${profile.full_name.replace('Dr. ', '')}` : 'Doctor'}
+                </div>
+                <div className="font-semibold text-xs text-[#64748b] uppercase">
+                  {profile?.grade || 'Clinical Practitioner'}
+                </div>
               </div>
-              <div className="size-10 rounded-full bg-gradient-to-br from-[#006591] to-[#0ea5e9] border-2 border-[#e0f2fe] hover:shadow-md transition-all" />
+              <div className="size-10 rounded-full bg-gradient-to-br from-[#006591] to-[#0ea5e9] border-2 border-[#e0f2fe] hover:shadow-md transition-all flex items-center justify-center text-white text-xs font-bold font-[Inter]">
+                {profile?.full_name ? profile.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'DR'}
+              </div>
             </div>
           </div>
         </header>

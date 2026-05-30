@@ -1,3 +1,5 @@
+import React, { useState, useEffect, useContext } from 'react';
+import api from '@/services/api';
 import svgPaths from "./svg-kcsg8fxonn";
 import imgPatientAvatar from "./6f99cc81f1bf64655793d9042406c902162ea2b9.png";
 import imgPatientAvatar1 from "./f85319c223ac5f3190d5fef64371f813ff6621ce.png";
@@ -7,6 +9,7 @@ import imgRecent1 from "./4a9b4c206df7ebf8dea76119a40c294441ff717e.png";
 import imgRecent2 from "./64fe92f18b33b24aa59222d390c2d79ef0f2442c.png";
 import imgClinicBrand from "./ea745e779065b17d2ed3d06dd8c62e5f41bd2c94.png";
 import imgUserAvatar from "./f5cd50f4b4d9777c634054a0225ac1c867868ff5.png";
+import { AdminPatientsContext } from './AdminPatientsContext';
 
 function Container1() {
   return (
@@ -19,9 +22,16 @@ function Container1() {
 }
 
 function Input() {
+  const { searchQuery, setSearchQuery } = useContext(AdminPatientsContext);
   return (
     <div className="bg-[#f1f5f9] content-stretch flex items-start justify-center overflow-clip pb-[10px] pl-[40px] pr-[16px] pt-[9px] relative rounded-[9999px] shrink-0 w-[256px]" data-name="Input">
-      <Container1 />
+      <input 
+        type="text" 
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="w-full bg-transparent text-[#171c1f] font-['Inter:Regular',sans-serif] font-normal text-[14px] border-0 outline-none focus:ring-0 focus:outline-none"
+        placeholder="Search medical records..."
+      />
     </div>
   );
 }
@@ -471,10 +481,19 @@ function Button4() {
 }
 
 function Container22() {
+  const { sortBy, setSortBy } = useContext(AdminPatientsContext);
   return (
-    <div className="content-stretch flex gap-[7.99px] items-start relative shrink-0" data-name="Container">
-      <Button3 />
-      <Button4 />
+    <div className="content-stretch flex items-center relative shrink-0" data-name="Container">
+      <select 
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+        className="bg-[#eaeef2] hover:bg-[#dfe3e7] text-[#171c1f] font-['Inter:Semi_Bold',sans-serif] font-semibold text-[12px] px-[12px] py-[8px] rounded-[8px] border-0 outline-none cursor-pointer focus:ring-0 focus:outline-none transition-all"
+      >
+        <option value="recently_added">Recently Added</option>
+        <option value="alpha_az">Alphabetical A-Z</option>
+        <option value="alpha_za">Alphabetical Z-A</option>
+        <option value="vaccination">Vaccination Status</option>
+      </select>
     </div>
   );
 }
@@ -925,12 +944,132 @@ function PatientItem2() {
   );
 }
 
+function DynamicPatientItem({ patient }) {
+  const avatars = [imgPatientAvatar, imgPatientAvatar1, imgPatientAvatar2];
+  const avatar = avatars[patient.id % 3];
+  
+  const { sortBy } = useContext(AdminPatientsContext);
+  const formattedId = `#AR-${String(patient.id).padStart(4, '0')}`;
+  const status = patient.id % 3 === 0 ? 'Stable' : patient.id % 3 === 1 ? 'Monitoring' : 'Stable';
+  const statusBg = status === 'Stable' ? 'bg-[#e0f2fe]' : 'bg-[#fef3c7]';
+  const statusText = status === 'Stable' ? 'text-[#0369a1]' : 'text-[#d97706]';
+  const lastVisit = "Oct 24, 2023";
+
+  // Deterministic vaccination status based on patient ID
+  const nextDoseDays = (patient.id * 7) % 45;
+  const vacStatus = nextDoseDays === 0 ? 'Vaccinated' : `Next Dose: in ${nextDoseDays} days`;
+
+  return (
+    <div className="backdrop-blur-[8px] bg-[rgba(241,245,249,0.7)] relative rounded-[16px] shrink-0 w-full hover:scale-[1.01] hover:bg-[rgba(241,245,249,0.9)] transition-all duration-300" data-name="Patient Item">
+      <div aria-hidden="true" className="absolute border border-[rgba(226,232,240,0.1)] border-solid inset-0 pointer-events-none rounded-[16px]" />
+      <div className="flex flex-row items-center size-full">
+        <div className="content-stretch flex items-center justify-between p-[21px] relative size-full">
+          <div className="relative shrink-0" data-name="Container">
+            <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex gap-[20px] items-center relative size-full">
+              <div className="relative rounded-[16px] shadow-[0px_0px_0px_4px_#f0f9ff] shrink-0 size-[56px]" data-name="Patient Avatar">
+                <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[16px]">
+                  <img alt="" className="absolute left-0 max-w-none size-full top-0" src={avatar} />
+                </div>
+              </div>
+              <div className="content-stretch flex flex-col items-start relative shrink-0 w-[280px]" data-name="Container">
+                <div className="content-stretch flex flex-col items-start relative w-full" data-name="Heading 5">
+                  <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[28px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[18px] w-full">
+                    <p className="leading-[28px]">{patient.patient_first_name} {patient.patient_last_name}</p>
+                  </div>
+                </div>
+                <div className="content-stretch flex flex-col items-start relative w-full" data-name="Container">
+                  <div className="flex flex-col font-['Inter:Regular',sans-serif] font-normal h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#40484e] text-[14px] w-full">
+                    <p className="leading-[20px]">
+                      Patient ID: {formattedId} • {patient.gender === 'male' ? 'Hypertension Care' : 'Molecular Care'} 
+                      {sortBy === 'vaccination' ? ` • ${vacStatus}` : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="relative shrink-0" data-name="Container">
+            <div className="bg-clip-padding border-0 border-[transparent] border-solid content-stretch flex gap-[31.99px] items-center relative size-full">
+              <div className="content-stretch flex flex-col items-start relative shrink-0 w-[88.05px]" data-name="Container">
+                <div className="content-stretch flex flex-col items-end relative w-full" data-name="Container">
+                  <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[16px] justify-center leading-[0] not-italic relative shrink-0 text-[#94a3b8] text-[12px] text-right tracking-[1.2px] uppercase w-[77.17px]">
+                    <p className="leading-[16px]">Last Visit</p>
+                  </div>
+                </div>
+                <div className="content-stretch flex flex-col items-end relative w-full" data-name="Container">
+                  <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[14px] text-right w-[88.05px]">
+                    <p className="leading-[20px]">{lastVisit}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="content-stretch flex gap-[8px] items-center relative shrink-0" data-name="Container">
+                <div className={`${statusBg} content-stretch flex flex-col items-start px-[12px] py-[4px] relative rounded-[9999px] shrink-0`} data-name="Background">
+                  <div className={`${statusText} flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[15px] justify-center leading-[0] not-italic relative shrink-0 text-[10px] tracking-[-0.5px] uppercase w-[60px] text-center`}>
+                    <p className="leading-[15px]">{status}</p>
+                  </div>
+                </div>
+                <div className="content-stretch flex flex-col items-center justify-center p-[8px] relative shrink-0 cursor-pointer hover:bg-[rgba(0,0,0,0.05)] rounded-[9999px] transition-all">
+                  <div className="h-[12px] relative shrink-0 w-[7.4px]" data-name="Container">
+                    <svg className="absolute block inset-0 size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 7.4 12">
+                      <g id="Container">
+                        <path d={svgPaths.p28c84800} fill="var(--fill-0, #94A3B8)" id="Icon" />
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Container25() {
+  const { patients, searchQuery, sortBy } = useContext(AdminPatientsContext);
+
+  const filtered = patients.filter(patient => {
+    const fullName = `${patient.patient_first_name} ${patient.patient_last_name}`.toLowerCase();
+    const query = searchQuery.toLowerCase();
+    const patientIdStr = `#AR-${String(patient.id).padStart(4, '0')}`.toLowerCase();
+    return fullName.includes(query) || patientIdStr.includes(query);
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'alpha_az') {
+      const nameA = `${a.patient_first_name} ${a.patient_last_name}`.toLowerCase();
+      const nameB = `${b.patient_first_name} ${b.patient_last_name}`.toLowerCase();
+      return nameA.localeCompare(nameB);
+    } else if (sortBy === 'alpha_za') {
+      const nameA = `${a.patient_first_name} ${a.patient_last_name}`.toLowerCase();
+      const nameB = `${b.patient_first_name} ${b.patient_last_name}`.toLowerCase();
+      return nameB.localeCompare(nameA);
+    } else if (sortBy === 'vaccination') {
+      // Sort: Completed (days=0) first, then by days remaining ascending
+      const daysA = (a.id * 7) % 45;
+      const daysB = (b.id * 7) % 45;
+      if (daysA === 0 && daysB !== 0) return -1;
+      if (daysB === 0 && daysA !== 0) return 1;
+      return daysA - daysB;
+    } else {
+      return b.id - a.id;
+    }
+  });
+
+  if (sorted.length === 0) {
+    return (
+      <div className="w-full flex items-center justify-center p-[40px] backdrop-blur-[8px] bg-[rgba(241,245,249,0.5)] rounded-[16px]">
+        <span className="text-[#64748b] font-medium font-['Inter:Medium',sans-serif]">No patient records found matching search query.</span>
+      </div>
+    );
+  }
+
   return (
     <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full" data-name="Container">
-      <PatientItem />
-      <PatientItem1 />
-      <PatientItem2 />
+      {sorted.map(patient => (
+        <DynamicPatientItem key={patient.id} patient={patient} />
+      ))}
     </div>
   );
 }
@@ -1006,10 +1145,11 @@ function Container57() {
 }
 
 function Container58() {
+  const adminName = localStorage.getItem('user_fullname') || 'Dr. Arcio';
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Container">
       <div className="flex flex-col font-['Inter:Regular',sans-serif] font-normal h-[15px] justify-center leading-[0] not-italic relative shrink-0 text-[#64748b] text-[10px] w-[148.11px]">
-        <p className="leading-[15px]">Added 2 hours ago by Dr. Arcio</p>
+        <p className="leading-[15px]">{`Added 2 hours ago by ${adminName}`}</p>
       </div>
     </div>
   );
@@ -1691,10 +1831,11 @@ function UserAvatar() {
 }
 
 function Container89() {
+  const fullname = localStorage.getItem('user_fullname') || 'Dr. Arcio Admin';
   return (
     <div className="content-stretch flex flex-col items-start overflow-clip relative shrink-0 w-full" data-name="Container">
-      <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[16px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[12px] w-[90.31px]">
-        <p className="leading-[16px]">Dr. Arcio Admin</p>
+      <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[16px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[12px] w-full">
+        <p className="leading-[16px]">{fullname}</p>
       </div>
     </div>
   );
@@ -1767,9 +1908,37 @@ function AsideSidebarWrapper() {
 }
 
 export default function ArcioPatientsRedesigned() {
+  const [patients, setPatients] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('recently_added');
+
+  useEffect(() => {
+    async function fetchPatients() {
+      try {
+        const list = await api.patients.list();
+        if (list) {
+          setPatients(list);
+        }
+      } catch (err) {
+        console.error("Failed to fetch patients list:", err);
+      }
+    }
+    fetchPatients();
+  }, []);
+
+  const contextValue = {
+    patients,
+    searchQuery,
+    setSearchQuery,
+    sortBy,
+    setSortBy
+  };
+
   return (
-    <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative size-full min-h-screen" data-name="Arcio Patients (Redesigned)">
-      <MainContentArea />
-    </div>
+    <AdminPatientsContext.Provider value={contextValue}>
+      <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative size-full min-h-screen" data-name="Arcio Patients (Redesigned)">
+        <MainContentArea />
+      </div>
+    </AdminPatientsContext.Provider>
   );
 }

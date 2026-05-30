@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ArcioLogo } from '../../../src/components/ArcioLogo';
+import api from '@/services/api';
 
 export default function DoctorLogin() {
   const navigate = useNavigate();
@@ -9,14 +10,34 @@ export default function DoctorLogin() {
   const [remember, setRemember] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const accent = '#006591';
   const accentDark = '#004a6b';
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => navigate('/doctor'), 1200);
+    setError('');
+    try {
+      const response = await api.auth.login({ email, password });
+      if (response && response.access) {
+        localStorage.setItem('token', response.access);
+        localStorage.setItem('access_token', response.access);
+        localStorage.setItem('refresh_token', response.refresh);
+        localStorage.setItem('user_role', response.role);
+        localStorage.setItem('user_fullname', response.full_name);
+        localStorage.setItem('user_email', email);
+        setTimeout(() => navigate('/doctor'), 1200);
+      } else {
+        setError('Login failed. Please check your credentials.');
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err?.message || 'Invalid email or password');
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,6 +89,12 @@ export default function DoctorLogin() {
 
         <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px', marginBottom: 8, color: '#0f172a' }}>Welcome back</h1>
         <p style={{ fontSize: 14, color: '#64748b', marginBottom: 32 }}>Sign in to manage your patients.</p>
+
+        {error && (
+          <div style={{ color: '#ef4444', fontSize: 13, marginBottom: 16, padding: '10px 12px', background: '#fee2e2', borderRadius: 10, fontWeight: 500 }}>
+            ⚠️ {error}
+          </div>
+        )}
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Field label="Email address" type="email" value={email} onChange={setEmail} placeholder="doctor@hospital.com" accent={accent} required />

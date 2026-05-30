@@ -60,14 +60,28 @@ export default function PublicBooking() {
     return false;
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const payload = {
+        doctor_name: selectedDoctor.name,
+        appointment_date: selectedDate,
+        guest_first_name: guestFirstName,
+        guest_last_name: guestLastName,
+        guest_phone: guestPhone
+      };
+
+      await api.appointments.create(payload);
+
       setIsSubmitting(false);
       setIsConfirmed(true);
       showToast('Appointment booked successfully!', 'success');
       setTimeout(() => navigate('/'), 2500);
-    }, 1500);
+    } catch (err) {
+      console.error(err);
+      setIsSubmitting(false);
+      showToast(err.message || 'Failed to book appointment. Verify phone format (e.g. 0555123456).', 'error');
+    }
   };
 
   // Generate next 14 days for the date picker
@@ -209,7 +223,7 @@ export default function PublicBooking() {
                   value={guestPhone} 
                   onChange={(e) => setGuestPhone(e.target.value)} 
                   className="w-full px-4 py-3 rounded-xl border border-[#cbd5e1] focus:border-[#0ea5e9] focus:ring-2 focus:ring-[#0ea5e9]/20 transition-all outline-none" 
-                  placeholder="e.g. +212 600 000 000" 
+                  placeholder="e.g. 0555123456 (Algerian format)" 
                 />
               </div>
             </div>

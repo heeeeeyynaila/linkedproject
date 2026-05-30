@@ -1,13 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { Menu, ChevronLeft } from 'lucide-react';
 import ScrollToTop from '../../../src/components/ScrollToTop';
+import api from '@/services/api';
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const data = await api.auth.me();
+        localStorage.setItem('user_fullname', data.full_name);
+        localStorage.setItem('user_email', data.email);
+        localStorage.setItem('user_phone', data.phone || '');
+        localStorage.setItem('user_address', data.address || '');
+        localStorage.setItem('user_role', data.role);
+      } catch (err) {
+        console.error('Failed to load profile in patient layout:', err);
+      }
+    }
+    loadProfile();
+  }, []);
 
   const handleGlobalNavClick = (e) => {
     // Intercept clicks on links or buttons in Figma imports

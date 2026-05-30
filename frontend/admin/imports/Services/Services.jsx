@@ -1532,10 +1532,11 @@ function Container74() {
 }
 
 function Container77() {
+  const adminName = localStorage.getItem('user_fullname') || 'Dr. Arcio';
   return (
     <div className="content-stretch flex flex-col items-end relative shrink-0 w-full" data-name="Container">
       <div className="flex flex-col font-['Inter:Bold',sans-serif] font-bold justify-center leading-[0] not-italic relative shrink-0 text-[#1a1a1a] text-[12px] text-right whitespace-nowrap">
-        <p className="leading-[16px]">Dr. Arcio</p>
+        <p className="leading-[16px]">{adminName}</p>
       </div>
     </div>
   );

@@ -1,11 +1,41 @@
 import { Search, Bell, Settings, User, LogOut, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useNavigate, Link } from 'react-router';
 import { useState, useRef, useEffect } from 'react';
+import api from '@/services/api';
 
 export function AdminHeader() {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [profile, setProfile] = useState(null);
   const notifRef = useRef(null);
+
+  const [swaps, setSwaps] = useState([]);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const data = await api.auth.me();
+        setProfile(data);
+      } catch (err) {
+        console.error('Failed to fetch admin header profile:', err);
+      }
+    }
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    async function loadSwaps() {
+      try {
+        const data = await api.shiftSwaps.list();
+        setSwaps(data.filter(s => s.status === 'pending'));
+      } catch (err) {
+        console.error('Failed to load swaps in AdminHeader:', err);
+      }
+    }
+    if (profile?.role === 'admin') {
+      loadSwaps();
+    }
+  }, [profile]);
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -18,9 +48,18 @@ export function AdminHeader() {
   }, []);
 
   const notifications = [
-    { id: 1, title: 'New Doctor Registered', time: '5m ago', type: 'success', icon: <CheckCircle className="h-4 w-4" /> },
-    { id: 2, title: 'System Backup Complete', time: '1h ago', type: 'info', icon: <FileText className="h-4 w-4" /> },
-    { id: 3, title: 'Server Load Alert', time: '3h ago', type: 'warning', icon: <AlertTriangle className="h-4 w-4" /> },
+    ...swaps.map(s => ({
+      id: `swap-${s.id}`,
+      title: `Shift Swap Request`,
+      desc: `${s.requester_name} wants to swap shift with ${s.receiver_name.split(' ')[1]} (${s.schedule_details?.day_of_week?.toUpperCase()} shift)`,
+      time: 'Pending Admin Approval',
+      type: 'warning',
+      isSwap: true,
+      swapId: s.id,
+      icon: <AlertTriangle className="h-4 w-4" />
+    })),
+    { id: 1, title: 'New Doctor Registered', desc: 'Dr. Sarah Chen registered', time: '5m ago', type: 'success', icon: <CheckCircle className="h-4 w-4" /> },
+    { id: 2, title: 'System Backup Complete', desc: 'Secure database backup succeeded', time: '1h ago', type: 'info', icon: <FileText className="h-4 w-4" /> },
   ];
 
   return (
@@ -64,22 +103,61 @@ export function AdminHeader() {
               <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-[#e2e8f0] py-4 z-50 animate-slide-up">
                 <div className="px-5 pb-3 border-b border-[#f1f5f9] flex items-center justify-between">
                   <h3 className="font-bold text-[#0f172a]">Notifications</h3>
-                  <span className="text-[10px] font-bold text-[#0ea5e9] uppercase tracking-wider bg-[#0ea5e9]/10 px-2 py-0.5 rounded-full">3 New</span>
+                  <span className="text-[10px] font-bold text-[#0ea5e9] uppercase tracking-wider bg-[#0ea5e9]/10 px-2 py-0.5 rounded-full">{notifications.length} New</span>
                 </div>
-                <div className="max-h-[400px] overflow-y-auto">
+                <div className="max-h-[300px] overflow-y-auto">
                   {notifications.map((n) => (
-                    <div key={n.id} className="px-5 py-4 hover:bg-[#f8fafc] cursor-pointer transition-colors border-b last:border-0 border-[#f1f5f9] group">
+                    <div key={n.id} className="px-5 py-4 hover:bg-[#f8fafc] transition-colors border-b last:border-0 border-[#f1f5f9] group">
                       <div className="flex items-start gap-4">
-                        <div className={`p-2 rounded-xl ${n.type === 'success' ? 'bg-green-50 text-green-600' : n.type === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
+                        <div className={`p-2 rounded-xl shrink-0 ${n.type === 'success' ? 'bg-green-50 text-green-600' : n.type === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
                           {n.icon}
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-[#334155] group-hover:text-[#0ea5e9] transition-colors">{n.title}</p>
-                          <p className="text-xs text-[#94a3b8] mt-0.5">{n.time}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[#334155] group-hover:text-[#0ea5e9] transition-colors truncate">{n.title}</p>
+                          {n.desc && <p className="text-xs text-[#64748b] mt-0.5 leading-normal">{n.desc}</p>}
+                          <p className="text-[10px] text-[#94a3b8] mt-1">{n.time}</p>
+                          
+                          {n.isSwap && (
+                            <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    await api.shiftSwaps.updateStatus(n.swapId, 'approved');
+                                    setSwaps(prev => prev.filter(s => s.id !== n.swapId));
+                                    alert('Shift swap request approved successfully! Schedule roster updated.');
+                                  } catch (err) {
+                                    console.error(err);
+                                    alert('Failed to approve shift swap.');
+                                  }
+                                }}
+                                className="px-3 py-1 bg-[#0ea5e9] hover:bg-[#006591] text-white rounded-lg text-[10px] font-bold shadow transition-all cursor-pointer"
+                              >
+                                Approve
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    await api.shiftSwaps.updateStatus(n.swapId, 'rejected');
+                                    setSwaps(prev => prev.filter(s => s.id !== n.swapId));
+                                    alert('Shift swap request rejected.');
+                                  } catch (err) {
+                                    console.error(err);
+                                    alert('Failed to reject shift swap.');
+                                  }
+                                }}
+                                className="px-3 py-1 bg-[#fee2e2] text-[#ef4444] hover:bg-[#fecaca] rounded-lg text-[10px] font-bold transition-colors cursor-pointer"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
                   ))}
+                  {notifications.length === 0 && (
+                    <p className="text-xs text-[#94a3b8] text-center py-6">No active notifications</p>
+                  )}
                 </div>
                 <div className="px-5 pt-3">
                   <Link to="/admin/announcements" onClick={() => setShowNotifications(false)} className="block w-full py-2.5 text-sm font-bold text-[#0ea5e9] hover:bg-[#0ea5e9]/5 rounded-xl transition-colors text-center">
@@ -96,8 +174,8 @@ export function AdminHeader() {
         {/* User Profile */}
         <div className="flex items-center gap-3 pl-2 cursor-pointer group relative">
           <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold text-[#0f172a] group-hover:text-[#0ea5e9] transition-colors">Dr. Arcio Admin</p>
-            <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">Clinical Controller</p>
+            <p className="text-sm font-semibold text-[#0f172a] group-hover:text-[#0ea5e9] transition-colors">{profile?.full_name || 'Dr. Arcio Admin'}</p>
+            <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">{profile?.role || 'Clinical Controller'}</p>
           </div>
           
           <div className="relative">

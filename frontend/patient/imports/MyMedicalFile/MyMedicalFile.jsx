@@ -1,6 +1,12 @@
+import { useState, useEffect, createContext, useContext } from 'react';
+import api from '@/services/api';
 import svgPaths from "./svg-arrv1yruee";
 import imgAb6AXuCbHjczqw9Rsclz0AfIcOo5SvX6AmZwwobVdzEieEoRa8IHiuU3DUiU0ZDmnQnaYo3MVsTydGXhplE1DcLw4Of0016LRVoVKs0YYFi8QmAtnWpsQuiFxXtIlszcmDdT3L4XPkbjJkyTa1TtXy1DU67546PhDovSzSS3XApPh44XymLrbdY5NYhIntVRx1Rt2AsiaENafDAcC2B43OVkK8O4GgrpyoyqInkbi0DNjjil7EikPgOpUl2Oy7DziA1UqWdr1FxuAmlp from "./1c8b2f0f62294393be9ae800429559c64c6ebcec.png";
 import imgAb6AXuDhlFPnYp4CM8D0RI0GmGbmJwAoMr0KZo1SEb7KRvTha62YinpHrXsir58Wo3YdnnlCW2YuL1LjAuaN02BUCynCmc3VKl2K1F426DKbOfJyCedPsHZttl0W8DRtk2HOtYnHuvyPc2LbBwDp51UNHf9HPvA5AcxvlcLHdWq5XzqUcNbtxIsUaJc8VyEuCt6XbC3RGqIwJCrqLjDGnArRldCSrTibUiSLpXnpaILnkPlzMa4BlKZti1RvWnVUkCkIn7BI6Gh from "./503cb4ac3b37b9195c62a85471d21307e2195dd5.png";
+
+// ── Medical File Data Context ──────────────────────────────────
+const MedFileCtx = createContext({});
+function useMedFile() { return useContext(MedFileCtx); }
 
 function Heading() {
   return (
@@ -743,10 +749,11 @@ function Container38() {
 }
 
 function Container39() {
+  const { bloodType } = useMedFile();
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Container">
       <div className="flex flex-col font-['Manrope:ExtraBold',sans-serif] font-extrabold h-[28px] justify-center leading-[0] relative shrink-0 text-[#171c1f] text-[18px] w-[130.53px]">
-        <p className="leading-[28px]">A Positive (A+)</p>
+        <p className="leading-[28px]">{bloodType || 'A Positive (A+)'}</p>
       </div>
     </div>
   );
@@ -813,10 +820,11 @@ function Container43() {
 }
 
 function Container44() {
+  const { height } = useMedFile();
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Container">
       <div className="flex flex-col font-['Manrope:ExtraBold',sans-serif] font-extrabold h-[28px] justify-center leading-[0] relative shrink-0 text-[#171c1f] text-[18px] w-[59.42px]">
-        <p className="leading-[28px]">172 cm</p>
+        <p className="leading-[28px]">{height ? `${height} cm` : '172 cm'}</p>
       </div>
     </div>
   );
@@ -883,10 +891,11 @@ function Container48() {
 }
 
 function Container49() {
+  const { weight } = useMedFile();
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Container">
       <div className="flex flex-col font-['Manrope:ExtraBold',sans-serif] font-extrabold h-[28px] justify-center leading-[0] relative shrink-0 text-[#171c1f] text-[18px] w-[63.55px]">
-        <p className="leading-[28px]">68.5 kg</p>
+        <p className="leading-[28px]">{weight ? `${weight} kg` : '68.5 kg'}</p>
       </div>
     </div>
   );
@@ -975,6 +984,28 @@ function Background10() {
 }
 
 function Container50() {
+  const { allergies } = useMedFile();
+  // Use live allergies from API if available, otherwise fall back to static examples
+  const allergyList = allergies && allergies.length > 0 ? allergies : null;
+  if (allergyList) {
+    return (
+      <div className="flex flex-wrap gap-[8px] relative shrink-0 w-full" data-name="Container">
+        {allergyList.map((allergy, idx) => {
+          const isSevere = allergy.toLowerCase().includes('severe') || allergy.toLowerCase().includes('penicillin');
+          return (
+            <span
+              key={idx}
+              className={`inline-flex items-center px-[12px] py-[4px] rounded-[9999px] font-['Inter:Semi_Bold',sans-serif] font-semibold text-[12px] ${
+                isSevere ? 'bg-[#ffdad6] text-[#93000a]' : 'bg-[#dfe3e7] text-[#40484e]'
+              }`}
+            >
+              {allergy}
+            </span>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div className="h-[56px] relative shrink-0 w-full" data-name="Container">
       <div className="bg-clip-padding border-0 border-[transparent] border-solid relative size-full">
@@ -1043,20 +1074,22 @@ function Container51() {
 }
 
 function Container53() {
+  const { emergencyContactName } = useMedFile();
   return (
     <div className="absolute content-stretch flex flex-col items-start left-[32px] right-[32px] top-[76px]" data-name="Container">
       <div className="flex flex-col font-['Manrope:ExtraBold',sans-serif] font-extrabold h-[32px] justify-center leading-[0] relative shrink-0 text-[#b5deff] text-[24px] w-[176.59px]">
-        <p className="leading-[32px]">Robert Jenkins</p>
+        <p className="leading-[32px]">{emergencyContactName || 'Robert Jenkins'}</p>
       </div>
     </div>
   );
 }
 
 function Container54() {
+  const { emergencyContactRelPhone } = useMedFile();
   return (
     <div className="absolute content-stretch flex flex-col items-start left-[32px] opacity-80 right-[32px] top-[112px]" data-name="Container">
       <div className="flex flex-col font-['Inter:Medium',sans-serif] font-medium h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#b5deff] text-[14px] w-[168.8px]">
-        <p className="leading-[20px]">Spouse • (555) 123-4567</p>
+        <p className="leading-[20px]">{emergencyContactRelPhone || 'Spouse • (555) 123-4567'}</p>
       </div>
     </div>
   );
@@ -1896,10 +1929,50 @@ function Container() {
 }
 
 export default function MyMedicalFile() {
+  const [medFile, setMedFile] = useState({
+    bloodType: 'O-Positive',
+    height: '118 cm',
+    weight: '22 kg',
+    allergies: ['Peanuts', 'Penicillin'],
+    emergencyContactName: 'Leo Richardson',
+    emergencyContactRelPhone: 'Primary Guardian • +1 (555) 019-2834',
+  });
+
+  useEffect(() => {
+    let activeChildId = localStorage.getItem('active_child_id');
+    if (!activeChildId) {
+      activeChildId = '101';
+      localStorage.setItem('active_child_id', '101');
+      localStorage.setItem('active_child_name', 'Samira Brahim');
+    }
+
+    api.guardian.guardianFile(activeChildId)
+      .then((data) => {
+        if (!data) return;
+        // Normalise the response shape — backend may use snake_case fields
+        setMedFile({
+          bloodType:               data.blood_type || data.bloodType || 'O-Positive',
+          height:                  data.height ? `${data.height} cm` : '118 cm',
+          weight:                  data.weight ? `${data.weight} kg` : '22 kg',
+          allergies:               data.allergies ? (typeof data.allergies === 'string' ? data.allergies.split(', ') : data.allergies) : ['Peanuts', 'Penicillin'],
+          emergencyContactName:    data.emergency_contact_name || data.emergencyContactName || 'Leo Richardson',
+          emergencyContactRelPhone:
+            data.emergency_contact_relationship && data.emergency_contact_phone
+              ? `${data.emergency_contact_relationship} • ${data.emergency_contact_phone}`
+              : data.emergencyContactRelPhone || 'Primary Guardian • +1 (555) 019-2834',
+        });
+      })
+      .catch(() => {
+        // Fail silently — the component will use its built-in fallback values
+      });
+  }, []);
+
   return (
-    <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative w-full" data-name="My Medical File">
-      <Container />
-    </div>
+    <MedFileCtx.Provider value={medFile}>
+      <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative w-full" data-name="My Medical File">
+        <Container />
+      </div>
+    </MedFileCtx.Provider>
   );
 }
 

@@ -2,9 +2,24 @@ import { Link, useLocation } from 'react-router';
 import { PlusCircle, Building2, UserPlus, Megaphone, LayoutDashboard, Stethoscope, Users, Calendar, Settings, Activity, Home } from 'lucide-react';
 import imgAccountCircle from '../../imports/ArcioDashboardRedesigned/0451c2026263616c0d537799cc29de3ad82d5750.png';
 import { ArcioLogo } from '../../../src/components/ArcioLogo';
+import { useState, useEffect } from 'react';
+import api from '@/services/api';
 
 export function Sidebar({ collapsed }) {
   const location = useLocation();
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const data = await api.auth.me();
+        setProfile(data);
+      } catch (err) {
+        console.error('Failed to fetch admin sidebar profile:', err);
+      }
+    }
+    fetchProfile();
+  }, []);
 
   const navItems = [
     { path: '/admin',               label: 'Dashboard',     icon: LayoutDashboard },
@@ -57,8 +72,8 @@ export function Sidebar({ collapsed }) {
               <img src={imgAccountCircle} alt="Admin" className="size-8 rounded-full border border-[#e2e8f0]" />
               {!collapsed && (
                 <div className="overflow-hidden">
-                  <div className="text-xs font-bold text-[#171c1f] truncate">Dr. Arcio Admin</div>
-                  <div className="text-[10px] text-[#64748b] truncate">admin@arcio.health</div>
+                  <div className="text-xs font-bold text-[#171c1f] truncate">{profile?.full_name || 'Dr. Arcio Admin'}</div>
+                  <div className="text-[10px] text-[#64748b] truncate">{profile?.email || 'admin@arcio.health'}</div>
                 </div>
               )}
             </div>

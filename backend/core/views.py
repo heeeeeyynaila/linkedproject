@@ -32,6 +32,13 @@ def generate_password(length=16):
 def login_view(request):
     username = request.data.get('email')
     password = request.data.get('password')
+    
+    # Check if the user exists first
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    if not User.objects.filter(username=username).exists():
+        return Response({'error': 'Email not found'}, status=400)
+        
     user = authenticate(username=username, password=password)
     if user:
         refresh = RefreshToken.for_user(user)
@@ -41,7 +48,7 @@ def login_view(request):
             'role': user.role,
             'full_name': f"{user.first_name} {user.last_name}"
         })
-    return Response({'error': 'Wrong username or password'}, status=400)
+    return Response({'error': 'Incorrect password'}, status=400)
 
 
 @api_view(['POST'])
@@ -81,16 +88,19 @@ def change_password(request):
     new_password = request.data.get('new_password')
 
     if not old_password or not new_password:
-        return Response({'error': 'old_password and new_password are required'}, status=400)
+        return Response({'error': 'Both old and new passwords are required'}, status=400)
 
     if not user.check_password(old_password):
-        return Response({'error': 'Old password is incorrect'}, status=400)
+        return Response({'error': 'Current password is incorrect'}, status=400)
 
     if len(new_password) < 8:
-        return Response({'error': 'New password must be at least 8 characters'}, status=400)
+        return Response({'error': 'New password must be at least 8 characters long'}, status=400)
+
+    if not (any(c.isalpha() for c in new_password) and any(c.isdigit() for c in new_password)):
+        return Response({'error': 'New password must contain both letters and numbers (alphanumeric)'}, status=400)
 
     if old_password == new_password:
-        return Response({'error': 'New password must be different from old password'}, status=400)
+        return Response({'error': 'New password must be different from the old password'}, status=400)
 
     user.set_password(new_password)
     user.save()
@@ -114,9 +124,40 @@ def my_profile(request):
             doctor = Doctor.objects.get(user=user)
             data['service'] = doctor.service.name
             data['grade'] = doctor.grade
+            data['profile_picture'] = doctor.profile_picture.url if doctor.profile_picture else None
+            data['signature'] = doctor.signature.url if doctor.signature else None
         except Doctor.DoesNotExist:
             pass
     return Response(data)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_doctor_images(request):
+    user = request.user
+    if user.role != 'doctor':
+        return Response({'error': 'Only doctors can upload signature or profile picture'}, status=403)
+
+    try:
+        doctor = Doctor.objects.get(user=user)
+    except Doctor.DoesNotExist:
+        return Response({'error': 'Doctor profile not found'}, status=404)
+
+    profile_picture = request.FILES.get('profile_picture')
+    signature = request.FILES.get('signature')
+
+    if profile_picture:
+        doctor.profile_picture = profile_picture
+    if signature:
+        doctor.signature = signature
+
+    doctor.save()
+    return Response({
+        'message': 'Images uploaded successfully',
+        'profile_picture': doctor.profile_picture.url if doctor.profile_picture else None,
+        'signature': doctor.signature.url if doctor.signature else None
+    })
+
 
 
 @api_view(['PUT'])
@@ -333,7 +374,7 @@ def doctor_delete(request, pk):
 # PATIENTS + GUARDIAN
 # ========================
 @api_view(['GET'])
-@permission_classes([IsDoctor])
+@permission_classes([IsAdminOrDoctor])
 def patient_list(request):
     patients = Patient.objects.all()
     return Response(PatientSerializer(patients, many=True).data)
@@ -373,6 +414,15 @@ def patient_create(request):
                 return Response({'error': 'Guardian email is required for new guardian'}, status=400)
             if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
                 return Response({'error': 'Guardian email is not valid'}, status=400)
+
+            # Check UNIQUE constraint on email / username
+            if User.objects.filter(email=email).exists() or User.objects.filter(username=email).exists():
+                return Response({'error': f'A user with email "{email}" is already registered in the system. Please use a different email.'}, status=400)
+
+            # Check UNIQUE constraint on phone
+            if User.objects.filter(phone=phone).exists():
+                existing_user = User.objects.filter(phone=phone).first()
+                return Response({'error': f'Phone number "{phone}" is already registered to "{existing_user.first_name} {existing_user.last_name}" ({existing_user.role}). Please use a different phone number.'}, status=400)
 
             temp_password = generate_password()
             guardian = User.objects.create_user(
@@ -436,7 +486,7 @@ def patient_create(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsDoctor])
+@permission_classes([IsAdminOrDoctor])
 def patient_detail(request, pk):
     try:
         patient = Patient.objects.get(pk=pk)
@@ -1283,7 +1333,7 @@ def admin_dashboard(request):
     total_patients = Patient.objects.count()
     total_doctors = Doctor.objects.count()
     total_services = Service.objects.count()
-    total_appointments_today = Appointment.objects.filter(appointment_date=today).count()
+    total_appointments_today = Appointment.objects.count()
     pending_appointments_today = Appointment.objects.filter(
         appointment_date=today,
         appointment_status='pending'
@@ -1444,3 +1494,88 @@ def patient_filter(request):
         patients = Patient.objects.all()
 
     return Response(PatientSerializer(patients, many=True).data)
+
+
+# ========================
+# SHIFT SWAP VIEWS
+# ========================
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def shift_swap_list(request):
+    user = request.user
+    if user.role == 'admin':
+        swaps = ShiftSwap.objects.all().order_by('-created_at')
+    elif user.role == 'doctor':
+        try:
+            doctor = Doctor.objects.get(user=user)
+        except Doctor.DoesNotExist:
+            return Response({'error': 'Doctor profile not found'}, status=404)
+        swaps = ShiftSwap.objects.filter(
+            Q(requester=doctor) | Q(receiver=doctor)
+        ).order_by('-created_at')
+    else:
+        swaps = ShiftSwap.objects.none()
+
+    return Response(ShiftSwapSerializer(swaps, many=True).data)
+
+
+@api_view(['POST'])
+@permission_classes([IsDoctor])
+def shift_swap_create(request):
+    try:
+        doctor = Doctor.objects.get(user=request.user)
+    except Doctor.DoesNotExist:
+        return Response({'error': 'Doctor profile not found'}, status=404)
+
+    schedule_id = request.data.get('schedule')
+    receiver_id = request.data.get('receiver')
+
+    if not schedule_id or not receiver_id:
+        return Response({'error': 'Both schedule and receiver are required'}, status=400)
+
+    try:
+        schedule = Schedule.objects.get(pk=schedule_id)
+    except Schedule.DoesNotExist:
+        return Response({'error': 'Schedule not found'}, status=404)
+
+    try:
+        receiver = Doctor.objects.get(pk=receiver_id)
+    except Doctor.DoesNotExist:
+        return Response({'error': 'Receiver doctor not found'}, status=404)
+
+    if schedule.doctor != doctor:
+        return Response({'error': 'You do not own this schedule'}, status=403)
+
+    if receiver == doctor:
+        return Response({'error': 'You cannot swap a shift with yourself'}, status=400)
+
+    swap = ShiftSwap.objects.create(
+        requester=doctor,
+        receiver=receiver,
+        schedule=schedule,
+        status='pending'
+    )
+    return Response(ShiftSwapSerializer(swap).data, status=201)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAdmin])
+def shift_swap_status(request, pk):
+    try:
+        swap = ShiftSwap.objects.get(pk=pk)
+    except ShiftSwap.DoesNotExist:
+        return Response({'error': 'Shift swap request not found'}, status=404)
+
+    status = request.data.get('status')
+    if status not in ['approved', 'rejected']:
+        return Response({'error': 'Invalid status choice'}, status=400)
+
+    if status == 'approved':
+        # Change the actual schedule owner to the receiver doctor!
+        schedule = swap.schedule
+        schedule.doctor = swap.receiver
+        schedule.save()
+
+    swap.status = status
+    swap.save()
+    return Response(ShiftSwapSerializer(swap).data)

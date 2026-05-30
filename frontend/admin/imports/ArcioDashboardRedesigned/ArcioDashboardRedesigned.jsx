@@ -1,6 +1,10 @@
+import React, { useState, useEffect, useContext } from 'react';
+import api from '@/services/api';
 import svgPaths from "./svg-8z7c4867aa";
 import imgAccountCircle from "./0451c2026263616c0d537799cc29de3ad82d5750.png";
 import imgClinicLogo from "./634c264d1793a35ca2abfaccbe62de1de1d4811e.png";
+import { AdminDashboardContext } from './AdminDashboardContext';
+
 
 function Container2() {
   return (
@@ -107,10 +111,11 @@ function Margin() {
 }
 
 function Container9() {
+  const fullname = localStorage.getItem('user_fullname') || 'Dr. Arcio Admin';
   return (
     <div className="content-stretch flex flex-col items-end relative shrink-0 w-full" data-name="Container">
-      <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[14px] text-right w-[105.36px]">
-        <p className="leading-[20px]">Dr. Arcio Admin</p>
+      <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[20px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[14px] text-right w-full">
+        <p className="leading-[20px]">{fullname}</p>
       </div>
     </div>
   );
@@ -228,10 +233,11 @@ function Container13() {
 }
 
 function Heading2() {
+  const stats = useContext(AdminDashboardContext);
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Heading 3">
-      <div className="flex flex-col font-['Manrope:Extra_Bold',sans-serif] h-[40px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[28px] w-[43.03px]">
-        <p className="leading-[40px]">23</p>
+      <div className="flex flex-col font-['Manrope:Extra_Bold',sans-serif] h-[40px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[28px] w-[80px]">
+        <p className="leading-[40px]">{stats.total_doctors ?? 23}</p>
       </div>
     </div>
   );
@@ -300,10 +306,11 @@ function Container16() {
 }
 
 function Heading3() {
+  const stats = useContext(AdminDashboardContext);
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Heading 3">
-      <div className="flex flex-col font-['Manrope:Extra_Bold',sans-serif] h-[40px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[28px] w-[43.03px]">
-        <p className="leading-[40px]">23</p>
+      <div className="flex flex-col font-['Manrope:Extra_Bold',sans-serif] h-[40px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[28px] w-[80px]">
+        <p className="leading-[40px]">{stats.total_patients ?? 23}</p>
       </div>
     </div>
   );
@@ -372,10 +379,11 @@ function Container19() {
 }
 
 function Heading4() {
+  const stats = useContext(AdminDashboardContext);
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Heading 3">
-      <div className="flex flex-col font-['Manrope:Extra_Bold',sans-serif] h-[40px] justify-center leading-[0] not-italic relative shrink-0 text-[36px] text-white w-[43.03px]">
-        <p className="leading-[40px]">23</p>
+      <div className="flex flex-col font-['Manrope:Extra_Bold',sans-serif] h-[40px] justify-center leading-[0] not-italic relative shrink-0 text-[36px] text-white w-[80px]">
+        <p className="leading-[40px]">{stats.appointments_today ?? 0}</p>
       </div>
     </div>
   );
@@ -440,10 +448,11 @@ function Container22() {
 }
 
 function Heading5() {
+  const stats = useContext(AdminDashboardContext);
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0 w-full" data-name="Heading 3">
-      <div className="flex flex-col font-['Manrope:Extra_Bold',sans-serif] h-[40px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[28px] w-[43.03px]">
-        <p className="leading-[40px]">23</p>
+      <div className="flex flex-col font-['Manrope:Extra_Bold',sans-serif] h-[40px] justify-center leading-[0] not-italic relative shrink-0 text-[#171c1f] text-[28px] w-[80px]">
+        <p className="leading-[40px]">{stats.total_patients ?? 23}</p>
       </div>
     </div>
   );
@@ -1915,9 +1924,30 @@ function ButtonContextualFabSuppressedOnSubPagesShownHereAsItIsThePrimaryDashboa
 }
 
 export default function ArcioDashboardRedesigned() {
+  const [stats, setStats] = useState({
+    total_patients: 0,
+    total_doctors: 0,
+    appointments_today: 0,
+    pending_today: 0
+  });
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const data = await api.analytics.dashboard();
+        setStats(data);
+      } catch (err) {
+        console.error('Failed to load admin dashboard stats:', err);
+      }
+    }
+    loadStats();
+  }, []);
+
   return (
-    <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative size-full min-h-screen" data-name="Arcio Dashboard (Redesigned)">
-      <MainContentArea />
-    </div>
+    <AdminDashboardContext.Provider value={stats}>
+      <div className="bg-[#f1f5f9] content-stretch flex flex-col items-start relative size-full min-h-screen" data-name="Arcio Dashboard (Redesigned)">
+        <MainContentArea />
+      </div>
+    </AdminDashboardContext.Provider>
   );
 }

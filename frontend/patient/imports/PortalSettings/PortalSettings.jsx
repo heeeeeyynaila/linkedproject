@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import api from '@/services/api';
 import svgPaths from "./svg-zzb8p58agc";
 import imgPatientProfileAvatar from "./c9138823daef1d1fb3d6f403378e09d93ea57079.png";
 import imgClinicalEnvironment from "./9d0a17efd3e849ca423af43b32790968781c0164.png";
@@ -1007,14 +1009,100 @@ function Button1() {
 }
 
 function SectionChangePasswordCard() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [isError, setIsError] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword || !confirmPassword) return;
+    if (newPassword !== confirmPassword) {
+      setMsg('New passwords do not match');
+      setIsError(true);
+      return;
+    }
+    setLoading(true);
+    setMsg('');
+    try {
+      await api.auth.changePassword({
+        old_password: currentPassword,
+        new_password: newPassword,
+      });
+      setMsg('Password updated successfully!');
+      setIsError(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      console.error(err);
+      setMsg(err?.message || 'Error updating password.');
+      setIsError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="backdrop-blur-[8px] bg-[rgba(255,255,255,0.7)] relative rounded-[24px] shrink-0 w-full" data-name="Section - Change Password Card">
       <div className="content-stretch flex flex-col gap-[24px] items-start p-[32px] relative size-full">
         <div className="absolute bg-[rgba(255,255,255,0)] inset-[0_-0.01px_0.5px_0] rounded-[24px] shadow-[0px_20px_25px_-5px_rgba(15,23,42,0.05),0px_8px_10px_-6px_rgba(15,23,42,0.05)]" data-name="Section - Change Password Card:shadow" />
         <Container51 />
-        <Container53 />
+        
+        {/* Interactive Inputs */}
+        <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full">
+          <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+            <label className="block text-[12px] font-semibold text-[#40484e] px-[4px]">Current Password</label>
+            <input 
+              type="password" 
+              value={currentPassword} 
+              onChange={e => setCurrentPassword(e.target.value)} 
+              placeholder="••••••••••••" 
+              className="bg-[#f0f4f8] rounded-[12px] px-[16px] py-[14px] text-[15px] text-[#1a1a1a] w-full outline-none border border-transparent focus:border-[#006590] transition-all"
+            />
+          </div>
+          <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+            <label className="block text-[12px] font-semibold text-[#40484e] px-[4px]">New Password</label>
+            <input 
+              type="password" 
+              value={newPassword} 
+              onChange={e => setNewPassword(e.target.value)} 
+              placeholder="••••••••••••" 
+              className="bg-[#f0f4f8] rounded-[12px] px-[16px] py-[14px] text-[15px] text-[#1a1a1a] w-full outline-none border border-transparent focus:border-[#006590] transition-all"
+            />
+          </div>
+          <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full">
+            <label className="block text-[12px] font-semibold text-[#40484e] px-[4px]">Confirm New Password</label>
+            <input 
+              type="password" 
+              value={confirmPassword} 
+              onChange={e => setConfirmPassword(e.target.value)} 
+              placeholder="••••••••••••" 
+              className="bg-[#f0f4f8] rounded-[12px] px-[16px] py-[14px] text-[15px] text-[#1a1a1a] w-full outline-none border border-transparent focus:border-[#006590] transition-all"
+            />
+          </div>
+        </div>
+
+        {msg && (
+          <div className={`text-[13px] font-semibold p-3 rounded-[12px] w-full ${isError ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+            {isError ? '⚠️' : '✅'} {msg}
+          </div>
+        )}
+
         <Overlay />
-        <Button1 />
+        
+        <button 
+          onClick={handleSubmit} 
+          disabled={loading || !currentPassword || !newPassword || !confirmPassword}
+          className="content-stretch flex flex-col items-center justify-center py-[16px] relative rounded-[12px] shrink-0 w-full disabled:opacity-50 transition-opacity" 
+          style={{ backgroundImage: "linear-gradient(169.845deg, rgb(0, 101, 144) 0%, rgb(133, 203, 253) 100%)", cursor: 'pointer' }}
+        >
+          <div className="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold h-[24px] justify-center leading-[0] not-italic relative shrink-0 text-[16px] text-center text-white w-full">
+            <p className="leading-[24px]">{loading ? 'Updating...' : 'Update Security Credentials'}</p>
+          </div>
+        </button>
       </div>
     </div>
   );
